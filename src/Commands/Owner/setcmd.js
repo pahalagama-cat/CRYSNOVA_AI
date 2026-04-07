@@ -62,12 +62,12 @@ module.exports = {
         const command = args.join(' ');
         const cmdName = command.split(/\s+/)[0];
 
+        // ... (everything before stays the same)
+
         stickerCmds[hash] = command;
         saveStickerCmds();
 
-        return reply(
-            `╭─❍ *亗 STICKER BOUND*\n│\n│ ⚉ Hash   : ${hash.substring(0, 8)}...\n│ 𓄄 Cmd    : *${cmdName}*\n│ ✦ Status : ACTIVE\n╰──────────────────\n\nಠ_ಠ _Send this sticker to execute the command_`
-        );
+        return reply(`\`⎙ Bounded to ${cmdName}\``);
     }
 };
 
