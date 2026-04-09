@@ -1,13 +1,19 @@
+const axios = require("axios");
+const config = require("../../../settings/config");
+
+// Use gateway from config
+const GATEWAY_URL = process.env.GATEWAY_URL || config.api?.gateway || '';
+
 module.exports = {
     name: 'horror',
     alias: ['scary', 'creep', 'nightmare'],
-    desc: 'Generate horror AI images',
     category: 'AI',
+    desc: 'Generate horror AI images powered by CRYSNOVA',
 
     execute: async (sock, m, { args, reply }) => {
         try {
             if (!args.length) {
-                return reply('🎭 Usage:\n.horror <prompt>\n.horror cinematic <prompt>');
+                return reply(`ಠ_ಠ *HORROR AI*\n\nUsage: .horror <prompt>\n       .horror cinematic <prompt>`);
             }
 
             let isCinematic = false;
@@ -18,32 +24,42 @@ module.exports = {
             }
 
             const basePrompt = args.join(' ').trim();
-            if (!basePrompt) return reply('_*𓄄 Give a valid prompt*_');
+            if (!basePrompt) return reply('✘ Give a valid prompt');
 
             await sock.sendPresenceUpdate('composing', m.chat);
+            await sock.sendMessage(m.chat, { react: { text: '🎭', key: m.key } });
 
+            // Enhance prompt based on style
             const enhancedPrompt = isCinematic
                 ? `${basePrompt}, cinematic horror, film grain, dramatic lighting, wide shot, 8k, ultra detailed`
                 : `${basePrompt}, dark atmosphere, horror style, detailed, chilling`;
 
-            const negative = `bright, happy, cute, cartoon, low quality, blurry`;
+            // Call gateway /generate-image endpoint with category 'horror'
+            const response = await axios.post(
+                `${GATEWAY_URL}/generate-image`,
+                {
+                    category: 'horror',
+                    prompt: enhancedPrompt
+                },
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 60000
+                }
+            );
 
-            const url = `https://apis.prexzyvilla.site/ai/horror?prompt=${encodeURIComponent(enhancedPrompt)}&negative_prompt=${encodeURIComponent(negative)}`;
-
-            const res = await fetch(url);
-            if (!res.ok) return reply('_*⚉ API failed to generate horror image*_');
-
-            const buffer = Buffer.from(await res.arrayBuffer());
+            const imageUrl = response.data?.url;
+            if (!imageUrl) return reply('✘ Failed to generate horror image');
 
             await sock.sendMessage(m.chat, {
-                image: buffer,
-                caption: `🎭 *Horror Generated (${isCinematic ? 'CINEMATIC' : 'STANDARD'})*\n📝 ${basePrompt}\n☬ Stay spooky...`
+                image: { url: imageUrl },
+                caption: `𖣘 *HORROR AI*\n\n🎭 ${basePrompt}\n${isCinematic ? '—͟͟͞͞ CINEMATIC' : ''}\n\n_⚉ CRYSNOVA Gateway_`
             }, { quoted: m });
+
+            await sock.sendMessage(m.chat, { react: { text: '✓', key: m.key } });
 
         } catch (err) {
             console.error('[HORROR ERROR]', err);
-            reply('_*✘ Failed to summon nightmare*_');
+            reply('✘ Failed to summon nightmare');
         }
     }
 };
-
