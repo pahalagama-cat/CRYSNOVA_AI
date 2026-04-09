@@ -3,7 +3,7 @@
 <!-- CRYSNOVA WA BOT | Modern Profile README  -->
 
 <p align="center">
-  <img src="https://media.crysnovax.workers.dev/426675e4-b382-4e18-bcd8-19d0f7b2320c.jpg" alt="CRYSNOVA X BOT" width="100%">
+  <img src="https://media.crysnovax.workers.dev/e2327123-c634-4b30-8265-c31d01e033fd.jpg‎" alt="CRYSNOVA X BOT" width="100%">
 </p>
 
 <p align="center">
