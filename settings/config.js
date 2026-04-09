@@ -224,7 +224,12 @@ const config = {
         gateway:
             process.env.GATEWAY_URL     ||
             getVar('GATEWAY_URL')       ||
-            'https://key.crysnovax.workers.dev'
+            'https://key.crysnovax.workers.dev',
+        // ❄️ CRYSNOVA CDN (self‑hosted media upload)
+        cdn:
+            process.env.CDN_URL         ||
+            getVar('CDN_URL')           ||
+            'https://cdn.crysnovax.link'
     },
 
     // ════════════════════════════════════════════
