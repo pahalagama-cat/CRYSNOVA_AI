@@ -124,7 +124,7 @@ const config = {
             '.',
 
         description: 'Professional WhatsApp Bot — ZEE BOT powered by CRYSNOVA AI V2',
-        author:      'https://github.com/crysnovax/ZEE_BOT',
+        author:      'https://github.com/crysnovax/CRYSNOVA_AI',
         footer:      '© ZEE BOT | Powered by CRYSNOVA AI',
 
         ownerJid:
@@ -219,7 +219,12 @@ const config = {
         weather:
             process.env.WEATHER_API_KEY ||
             getVar('WEATHER_API_KEY')   ||
-            ''
+            '',
+        // 🔐 CRYSNOVA Gateway (secure proxy for all AI services)
+        gateway:
+            process.env.GATEWAY_URL     ||
+            getVar('GATEWAY_URL')       ||
+            'https://key.crysnovax.workers.dev'
     },
 
     // ════════════════════════════════════════════
@@ -257,4 +262,3 @@ const config = {
 };
 
 module.exports = config;
-            
