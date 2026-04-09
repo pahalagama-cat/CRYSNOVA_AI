@@ -3,6 +3,7 @@
 <p align="center">
   <img src="https://cdn.kord.live/serve/7Eoqeay8Ymfq.jpg" alt="CRYSNOVA AI V2 Banner" width="100%">
 </p>
+<img src="https://i.imgur.com/dBaSKWF.gif" height="20" width="100%">
 
 <p align="center">
   <a href="https://github.com/crysnovax">
