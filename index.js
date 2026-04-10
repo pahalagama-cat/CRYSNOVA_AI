@@ -31,7 +31,7 @@ if (autoUpdateEnabled) {
 
     const { performUpdate } = require('./src/Plugin/updater.js');
 
-    // Fire and forget – update runs in the background
+    //
     performUpdate({
         notifyOwner: null
     }).then(result => {
@@ -49,7 +49,7 @@ if (autoUpdateEnabled) {
 }
 
 // -------------------------------------------------------------------
-// 3. Load and start the main (obfuscated) bot
+// . Load and start
 // -------------------------------------------------------------------
 console.log(chalk.cyan('⎙ [CRYSNOVA] —͟͟͞͞𖣘❚ Loading main bot...'));
-require('./⚉.js');  // your obfuscated entry point
+require('./⚉.js');  
