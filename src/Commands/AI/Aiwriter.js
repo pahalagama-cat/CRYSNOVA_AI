@@ -1,7 +1,7 @@
 const axios = require('axios');
 const config = require('../../../settings/config');
 
-const GATEWAY_URL = config.api?.gateway || 'https://api.crysnovax.link';
+const GATEWAY_URL = config.api?.gateway || '';
 const GATEWAY_TOKEN = config.api?.gatewayToken || '';
 
 // Simple in‑memory cache for models (5 minutes)
