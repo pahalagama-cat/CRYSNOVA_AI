@@ -197,7 +197,7 @@ const config = {
     },
 
     // ════════════════════════════════════════════
-// (ZEE BOT .env style)
+    // API KEYS (ZEE BOT .env style)
     // ════════════════════════════════════════════
     api: {
         baseurl:
@@ -221,21 +221,26 @@ const config = {
             getVar('WEATHER_API_KEY')   ||
             'e6926030169752d7e0d85377e489c415',
         
+        // 🔐 CRYSNOVA Unified Gateway
         gateway:
             process.env.GATEWAY_URL     ||
             getVar('GATEWAY_URL')       ||
-            'https://key.crysnovax.workers.dev',
+            'https://api.crysnovax.link',
+        gatewayToken:
+            process.env.GATEWAY_TOKEN   ||
+            getVar('GATEWAY_TOKEN')     ||
+            'x',
 
         cdn:
             process.env.CDN_URL         ||
             getVar('CDN_URL')           ||
             'https://cdn.crysnovax.link',
-        // 
+        // 🎨 Image generation API base
         imageBase:
             process.env.IMAGE_API_BASE  ||
             getVar('IMAGE_API_BASE')    ||
             'https://apis.prexzyvilla.site/ai',
-        //
+        // 🖼️ Remove.bg API key
         removebg:
             process.env.REMOVE_BG_API_KEY ||
             getVar('REMOVE_BG_API_KEY')   ||
