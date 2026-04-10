@@ -2,13 +2,13 @@ const { removeBackground } = require('../Core/*.js');
 const config = require('../../../settings/config');
 
 // Use Remove.bg API key from config
-const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY || config.api?.removebg || '';
+const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY || config.api?.removebg || 'fy5Va5Qivw2BUQoojeSzzcHp';
 
 module.exports = {
     name: 'rembg',
     alias: ['removebg', 'nobg', 'bgremove'],
     desc: 'Remove background from replied image',
-    category: 'Tools',
+    category: 'AI',
     usage: '.rembg (reply to an image)',
     owner: false,
 
@@ -35,7 +35,7 @@ module.exports = {
             await sock.sendMessage(m.chat, {
                 image: result,
                 mimetype: 'image/png',
-                caption: `╭─❍ *CRYSNOVA AI V2.0*\n│ ✦ Background removed successfully.\n╰──────────────────`
+                caption: `╭─❍ *CRYSNOVA AI V2.0*\n│ _*✦ Background removed successfully.*_\n╰──────────────────`
             }, { quoted: m });
 
         } catch (err) {
