@@ -2,7 +2,7 @@ const { removeBackground } = require('../Core/*.js');
 const config = require('../../../settings/config');
 
 // Use Remove.bg API key from config
-const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY || config.api?.removebg || 'fy5Va5Qivw2BUQoojeSzzcHp';
+const REMOVE_BG_API_KEY = process.env.REMOVE_BG_API_KEY || config.api?.removebg || '';
 
 module.exports = {
     name: 'rembg',
