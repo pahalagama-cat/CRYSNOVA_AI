@@ -1,27 +1,28 @@
 const fs = require('fs');
 const path = require('path');
 const { exec } = require('child_process');
-const { Sticker } = require('wa-sticker-formatter'); // 👈 added
+const { Sticker } = require('wa-sticker-formatter');
 
 module.exports = {
     name: 'sticker',
-    alias: ['s','stick'],
+    alias: ['s', 'stick'],
     category: 'Media',
 
     execute: async (sock, m, { reply }) => {
-
         const quoted = m.quoted || m;
         const mime = quoted.mimetype || '';
 
-        if (!/image|video/.test(mime))
-            return reply('⚉ Reply to image or video');
+        if (!/image|video/.test(mime)) {
+            return reply('⚉ Reply to an image or video');
+        }
 
         try {
             const media = await quoted.download();
 
             const tempDir = path.join(__dirname, '../../temp');
-            if (!fs.existsSync(tempDir))
+            if (!fs.existsSync(tempDir)) {
                 fs.mkdirSync(tempDir, { recursive: true });
+            }
 
             const input = path.join(tempDir, `stk_${Date.now()}`);
             const output = input + '.webp';
@@ -31,18 +32,44 @@ module.exports = {
             // ================= VIDEO STICKER =================
             if (/video/.test(mime)) {
                 const duration = (quoted.msg || quoted).seconds || 0;
-                if (duration < 1 || duration > 60) {
+                if (duration < 1 || duration > 10) {
                     fs.unlinkSync(input);
-                    return reply('✘ Video must be between 1s and 60s');
+                    return reply('✘ Video must be between 1s and 10s');
                 }
 
-                const videoCmd = `ffmpeg -y -i "${input}" -t 5 -vf "fps=15,scale=512:512:force_original_aspect_ratio=increase,crop=512:512:(iw-ow)/2:(ih-oh)/2,format=yuva420p" -c:v libwebp -lossless 0 -q:v 80 -loop 0 -an "${output}"`;
-                await new Promise((resolve, reject) => {
-                    exec(videoCmd, (err) => {
-                        if (err) reject(err);
-                        else resolve();
+                // Helper to run ffmpeg with given settings
+                const compressVideo = async (fps, quality, durationSec, attempt = 1) => {
+                    const cmd = `ffmpeg -y -i "${input}" -t ${durationSec} -vf "fps=${fps},scale=512:512:force_original_aspect_ratio=increase,crop=512:512:(iw-ow)/2:(ih-oh)/2,format=yuva420p" -c:v libwebp -lossless 0 -q:v ${quality} -loop 0 -an -preset default -compression_level 6 "${output}"`;
+                    
+                    await new Promise((resolve, reject) => {
+                        exec(cmd, (err) => {
+                            if (err) reject(err);
+                            else resolve();
+                        });
                     });
-                });
+
+                    const sizeKB = fs.statSync(output).size / 1024;
+                    return sizeKB;
+                };
+
+                let sizeKB = await compressVideo(12, 70, 10);
+
+                // If first attempt too large, try lower fps and quality
+                if (sizeKB > 500) {
+                    sizeKB = await compressVideo(8, 40, 10);
+                }
+
+                // If still too large, trim to 5 seconds as a last resort
+                if (sizeKB > 500) {
+                    sizeKB = await compressVideo(8, 40, 5);
+                }
+
+                // Final check – if still too large, abort
+                if (sizeKB > 500) {
+                    fs.unlinkSync(input);
+                    fs.unlinkSync(output);
+                    return reply('✘ Video too complex to fit WhatsApp sticker limit. Try a shorter/simpler clip.');
+                }
             }
             // ================= IMAGE STICKER =================
             else {
@@ -55,25 +82,27 @@ module.exports = {
                 });
             }
 
-            // 👇 Read the generated webp
+            // Read the generated WebP
             let buffer = fs.readFileSync(output);
 
-            // 👇 Add packname & author using wa-sticker-formatter
+            // Add metadata using wa-sticker-formatter
             const sticker = new Sticker(buffer, {
                 pack: 'CRYSNOVA AI',
                 author: 'crysnovax',
-                type: 'full'
+                type: 'full',
+                quality: 70   // lower quality = smaller file
             });
-            buffer = await sticker.toBuffer(); // re‑encoded with metadata
+            buffer = await sticker.toBuffer();
 
             // Send the sticker
             await sock.sendMessage(m.chat, { sticker: buffer }, { quoted: m });
 
-            // Cleanup
+            // Cleanup temporary files
             fs.unlinkSync(input);
             if (fs.existsSync(output)) fs.unlinkSync(output);
 
         } catch (e) {
+            console.error(e);
             reply(`✘ Failed: ${e.message}`);
         }
     }
