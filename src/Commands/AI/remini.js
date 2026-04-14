@@ -4,7 +4,8 @@ const sharp = require('sharp');
 const config = require('../../../settings/config');
 
 // Use gateway from config (same as other AI commands)
-const GATEWAY_URL = process.env.GATEWAY_URL || config.api?.gateway || '';
+const GATEWAY_URL = process.env.GATEWAY_URL || config.api?.gateway || 'https://api.crysnovax.link';
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || config.api?.gatewayToken || '';
 
 module.exports = {
     name: 'remini',
@@ -41,11 +42,11 @@ module.exports = {
 
             const form = new FormData();
             form.append('image', media, { filename: 'image.jpg' });
-            form.append('prompt', 'remini'); // Send as prompt for gateway compatibility
+            form.append('prompt', 'remini'); // Special prompt for gateway
 
-            // Call gateway /changebg endpoint with 'remini' prompt
+            // Call gateway /changebg endpoint with token authentication
             const response = await axios.post(
-                `${GATEWAY_URL}/changebg`,
+                `${GATEWAY_URL}/changebg?token=${encodeURIComponent(GATEWAY_TOKEN)}`,
                 form,
                 {
                     headers: form.getHeaders(),
