@@ -1,13 +1,19 @@
-// dec.js - Voice Note to Text (Using Core Groq)
-const fs = require('fs')
-const path = require('path')
-const { downloadMediaMessage } = require('@whiskeysockets/baileys')
-const { groq } = require('../Core/+.js')   // ← Reusable from Core
+// dec.js - Voice Note to Text (Using Apex Gateway)
+const fs = require('fs');
+const path = require('path');
+const axios = require('axios');
+const FormData = require('form-data');
+const { downloadMediaMessage } = require('@whiskeysockets/baileys');
+const config = require('../../../settings/config');
+
+// Use Apex gateway from config with token
+const GATEWAY_URL = process.env.GATEWAY_URL || config.api?.gateway || 'https://api.crysnovax.link';
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || config.api?.gatewayToken || '';
 
 module.exports = {
     name: 'dec',
     alias: ['decode', 'transcribe', 'vtt'],
-    desc: 'Convert voice note to text using Groq Whisper',
+    desc: 'Convert voice note to text using CRYSNOVA Gateway',
     category: 'Utils',
     reactions: { start: '🎙️', success: '📑' },
 
@@ -15,50 +21,51 @@ module.exports = {
         try {
             const isVoiceNote = 
                 m.message?.audioMessage?.ptt === true ||
-                m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage?.ptt === true
+                m.message?.extendedTextMessage?.contextInfo?.quotedMessage?.audioMessage?.ptt === true;
 
             if (!isVoiceNote) {
-                return reply('✘ Reply to a voice note with `.dec`')
+                return reply('✘ Reply to a voice note with `.dec`');
             }
 
-            await sock.sendMessage(m.chat, { react: { text: '🎙️', key: m.key } })
+            await sock.sendMessage(m.chat, { react: { text: '🎙️', key: m.key } });
 
-            let audioMsg = m.message?.audioMessage
+            let audioMsg = m.message?.audioMessage;
             if (!audioMsg && m.message?.extendedTextMessage?.contextInfo?.quotedMessage) {
-                audioMsg = m.message.extendedTextMessage.contextInfo.quotedMessage.audioMessage
+                audioMsg = m.message.extendedTextMessage.contextInfo.quotedMessage.audioMessage;
             }
 
-            if (!audioMsg) return reply('✘ Could not detect voice note.')
+            if (!audioMsg) return reply('✘ Could not detect voice note.');
 
             const buffer = await downloadMediaMessage(
                 { message: { audioMessage: audioMsg } },
                 'buffer',
                 {},
                 { logger: console }
-            )
+            );
 
-            const tempPath = path.join(process.cwd(), `temp_voice_${Date.now()}.ogg`)
-            fs.writeFileSync(tempPath, buffer)
+            // Send to Apex gateway /transcribe endpoint with token
+            const form = new FormData();
+            form.append('file', buffer, { filename: 'audio.ogg', contentType: 'audio/ogg' });
 
-            // Use the reusable groq client from Core
-            const transcription = await groq.audio.transcriptions.create({
-                file: fs.createReadStream(tempPath),
-                model: "whisper-large-v3-turbo",
-                response_format: "text",
-                language: "en"
-            })
+            const response = await axios.post(
+                `${GATEWAY_URL}/transcribe?token=${encodeURIComponent(GATEWAY_TOKEN)}`,
+                form,
+                {
+                    headers: form.getHeaders(),
+                    timeout: 60000
+                }
+            );
 
-            fs.unlinkSync(tempPath)
-
+            const transcription = response.data?.text;
             if (!transcription?.trim()) {
-                return reply('𓄄 Could not understand the audio clearly.')
+                return reply('𓄄 Could not understand the audio clearly.');
             }
 
-            await reply(`🎙️ *Voice Transcription:*\n\n${transcription.trim()}\n\n_Powered by Groq Whisper_`)
+            await reply(`🎙️ *Voice Transcription:*\n\n${transcription.trim()}\n\n_⚉ CRYSNOVA Gateway_`);
 
         } catch (err) {
-            console.error('[DEC ERROR]', err.message)
-            await reply('𓉤 Transcription failed. Please try again.')
+            console.error('[DEC ERROR]', err.message);
+            await reply('𓉤 Transcription failed. Please try again.');
         }
     }
-}
+};
