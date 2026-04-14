@@ -1,15 +1,18 @@
 const axios = require("axios");
+const config = require("../../../settings/config");
+
+// Use gateway from config
+const GATEWAY_URL = process.env.GATEWAY_URL || config.api?.gateway || 'https://api.crysnovax.link';
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || config.api?.gatewayToken || '';
 
 module.exports = {
     name: "gpt",
     alias: ["chatgpt", "chat", "gpt4"],
-    category: "ai",
-    desc: "GPT AI Assistant",
+    category: "AI",
+    desc: "GPT AI Assistant powered by CRYSNOVA",
 
     execute: async (sock, m, { args, reply }) => {
-
-        const jid = m.key.remoteJid;
-
+        const jid = m.chat;
         const query = args.join(" ").trim();
 
         if (!query) {
@@ -17,12 +20,7 @@ module.exports = {
         }
 
         try {
-
-            await sock.sendMessage(jid, {
-                react: { text: "💫", key: m.key }
-            });
-
-            /* ⭐ TRAINING STYLE PROMPT SIMULATION */
+            await sock.sendMessage(jid, { react: { text: "💫", key: m.key } });
 
             const TRAINING_PROMPT = `
 You are Crysnova GPT Assistant.
@@ -38,37 +36,33 @@ User Question:
 ${query}
 `;
 
-            const apiUrl =
-                "https://all-in-1-ais.officialhectormanuel.workers.dev/" +
-                "?query=" +
-                encodeURIComponent(TRAINING_PROMPT) +
-                "&model=gpt-4.5";
-
-            const response = await axios.get(apiUrl, {
-                timeout: 60000
-            });
+            // Call gateway /chat endpoint with token
+            const response = await axios.post(
+                `${GATEWAY_URL}/chat?token=${encodeURIComponent(GATEWAY_TOKEN)}`,
+                {
+                    prompt: TRAINING_PROMPT,
+                    model: 'gpt-4.5'
+                },
+                {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 60000
+                }
+            );
 
             const data = response.data;
+            const replyText = data?.response || data?.text || data?.message || '';
 
-            if (data?.success && data?.message?.content) {
-
-                await sock.sendMessage(jid, {
-                    text: data.message.content
-                }, { quoted: m });
-
+            if (replyText) {
+                await sock.sendMessage(jid, { text: replyText }, { quoted: m });
             } else {
                 reply("𓉤 GPT response invalid.");
             }
 
-            await sock.sendMessage(jid, {
-                react: { text: "💨", key: m.key }
-            });
+            await sock.sendMessage(jid, { react: { text: "💨", key: m.key } });
 
         } catch (err) {
-
             console.error("GPT Plugin Error:", err.message);
-
-            reply("❌ GPT failed. Try again later.");
+            reply("`⚠︎ GPT failed. Try again later`.");
         }
     }
 };
