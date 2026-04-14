@@ -1,8 +1,9 @@
 const axios = require("axios");
 const config = require("../../../settings/config");
 
-// Use gateway URL from config (falls back to hardcoded if needed)
-const GATEWAY_URL = process.env.GATEWAY_URL || config.api?.gateway ||'';
+// Use gateway URL and token from config
+const GATEWAY_URL = process.env.GATEWAY_URL || config.api?.gateway || 'https://api.crysnovax.link';
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || config.api?.gatewayToken || '';
 
 module.exports = {
     name: "deepseek",
@@ -19,14 +20,11 @@ module.exports = {
         }
 
         try {
-            // Reaction while processing
-            await sock.sendMessage(jid, {
-                react: { text: "🤖", key: m.key }
-            });
+            await sock.sendMessage(jid, { react: { text: "🤖", key: m.key } });
 
-            // Call gateway /deepseek endpoint
+            // Call gateway /deepseek endpoint with token
             const response = await axios.post(
-                `${GATEWAY_URL}/deepseek`,
+                `${GATEWAY_URL}/deepseek?token=${encodeURIComponent(GATEWAY_TOKEN)}`,
                 { query },
                 {
                     headers: { 'Content-Type': 'application/json' },
@@ -44,9 +42,7 @@ module.exports = {
                 reply("✘ *Deepseek response failed*.");
             }
 
-            await sock.sendMessage(jid, {
-                react: { text: "💬", key: m.key }
-            });
+            await sock.sendMessage(jid, { react: { text: "💬", key: m.key } });
 
         } catch (err) {
             console.error("Deepseek Plugin Error:", err.message);
