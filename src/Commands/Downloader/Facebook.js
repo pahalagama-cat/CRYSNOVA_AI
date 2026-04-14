@@ -1,9 +1,14 @@
 const axios = require('axios');
+const config = require('../../../settings/config');
+
+// Use Apex gateway from config with token
+const GATEWAY_URL = process.env.GATEWAY_URL || config.api?.gateway || 'https://api.crysnovax.link';
+const GATEWAY_TOKEN = process.env.GATEWAY_TOKEN || config.api?.gatewayToken || '';
 
 module.exports = {
     name: 'fb',
     alias: ['facebook', 'fbdown'],
-    desc: 'Download Facebook video',
+    desc: 'Download Facebook video via CRYSNOVA Gateway',
     category: 'downloader',
     usage: '.fb <Facebook URL>',
     owner: false,
@@ -19,78 +24,70 @@ module.exports = {
             );
         }
 
-        await reply('✪ _*Downloading Facebook video...*_');
+        await reply('_*✪ Downloading...*_');
 
-        const apis = [
+        try {
+            // Call Apex gateway /download/facebookv2 endpoint
+            const apiUrl = `${GATEWAY_URL}/download/facebookv2?token=${encodeURIComponent(GATEWAY_TOKEN)}&url=${encodeURIComponent(url)}`;
+            const res = await axios.get(apiUrl, { timeout: 60000 });
+            const data = res.data;
 
-            // API 1
-            async () => {
-                const res = await axios.get(
-                    `https://api.akuari.my.id/downloader/fbdown?link=${encodeURIComponent(url)}`,
-                    { timeout: 45000 }
-                );
+            // Debug: log the response structure (remove after testing)
+            console.log('[FB GATEWAY RESPONSE]', JSON.stringify(data).slice(0, 500));
 
-                return {
-                    video: res.data?.respon?.url,
-                    title: res.data?.respon?.title
-                };
-            },
+            // Robust extraction of video URL from many possible response formats
+            let videoUrl = null;
+            let title = 'Facebook Video';
 
-            // API 2
-            async () => {
-                const res = await axios.get(
-                    `https://api.vreden.my.id/api/fbdl?url=${encodeURIComponent(url)}`,
-                    { timeout: 45000 }
-                );
-
-                return {
-                    video: res.data?.result?.hd || res.data?.result?.sd,
-                    title: res.data?.result?.title
-                };
-            },
-
-            // API 3
-            async () => {
-                const res = await axios.get(
-                    `https://api.botcahx.live/api/dowloader/fbdown?url=${encodeURIComponent(url)}`,
-                    { timeout: 45000 }
-                );
-
-                return {
-                    video: res.data?.result?.hd || res.data?.result?.sd
-                };
-            }
-
-        ];
-
-        let result = null;
-
-        for (const api of apis) {
-            try {
-                const data = await api();
-                if (data?.video) {
-                    result = data;
-                    break;
+            // Helper: deep search for any string that looks like an MP4 URL
+            const findVideoUrl = (obj) => {
+                if (!obj || typeof obj !== 'object') return null;
+                // Check common fields
+                const candidates = [
+                    obj?.result?.hd, obj?.result?.sd, obj?.hd, obj?.sd,
+                    obj?.url, obj?.video, obj?.link, obj?.download_url,
+                    obj?.data?.hd, obj?.data?.sd, obj?.data?.url,
+                    obj?.respon?.url, obj?.response?.url
+                ];
+                for (const c of candidates) {
+                    if (typeof c === 'string' && c.startsWith('http')) return c;
                 }
-            } catch (err) {
-                console.log('[FB API FAILED]', err.response?.status || err.message);
+                // Search values recursively (shallow)
+                for (const v of Object.values(obj)) {
+                    if (typeof v === 'string' && v.startsWith('http') && v.includes('.mp4')) return v;
+                    if (v && typeof v === 'object') {
+                        const nested = findVideoUrl(v);
+                        if (nested) return nested;
+                    }
+                }
+                return null;
+            };
+
+            videoUrl = findVideoUrl(data);
+
+            // Try to get title
+            title = data?.result?.title || data?.title || data?.respon?.title || data?.data?.title || 'Facebook Video';
+
+            if (!videoUrl) {
+           //     console.error('[FB] Could not extract video URL from:', data);
+                return reply('_✘ Failed to extract video URL from gateway response._');
             }
+
+            const caption =
+                `📘 *Facebook Downloader*\n\n` +
+                `❏◦: ${title}\n` +
+                `_*CRYSNOVA Gateway*_`;
+
+            await sock.sendMessage(m.chat, {
+                video: { url: videoUrl },
+                mimetype: 'video/mp4',
+                caption,
+                fileName: `${title.replace(/[^a-zA-Z0-9]/g, '_')}.mp4`
+            }, { quoted: m });
+
+        } catch (err) {
+            console.error('[FB ERROR]', err.message);
+            reply('✘ Download failed. Try again later.');
         }
-
-        if (!result || !result.video) {
-            return reply('✘ All APIs failed. Try again later.');
-        }
-
-        const caption =
-            `📘 *Facebook Downloader*\n\n` +
-            `Title: ${result.title || 'Facebook Video'}\n` +
-            `Downloaded by Crysnova AI`;
-
-        await sock.sendMessage(m.key.remoteJid, {
-            video: { url: result.video },
-            mimetype: 'video/mp4',
-            caption,
-            fileName: 'facebook-video.mp4'
-        }, { quoted: m });
     }
 };
