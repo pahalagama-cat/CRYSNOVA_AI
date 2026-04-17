@@ -88,12 +88,12 @@ sock.sendMessage = async (jid, content, options = {}) => {
             content.caption = (content.caption || '') + MARKER;
         }
 
-        // ✅ CONDITIONAL VERIFIED BADGE — only for media messages (not plain text)
+        // 
         const isMediaMessage = !!(
             content?.image ||
             content?.video ||
         //    content?.sticker ||
-            content?.audio ||
+       //     content?.audio ||
             content?.document ||
             content?.gif ||
             content?.ptv ||
@@ -110,11 +110,11 @@ sock.sendMessage = async (jid, content, options = {}) => {
                 participant: "0@s.whatsapp.net",
                 remoteJid: "status@broadcast",
                 quotedMessage: {
-                    conversation: "⌘ CRYSN☉VA AI 𓀀"
+                    conversation: "```⌘ CRYSN☉VA AI 𓀀```"
                 },
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: '120363402922206865@newsletter',
-                    newsletterName: 'ⓘ 𝓬𝓻𝔂𝓼𝓷𝓸𝓿𝓪 𝓿𝓮𝓻𝓲𝓯𝓲𝓮𝓭 ✓',
+                    newsletterName: '𝓬𝓻𝔂𝓼𝓷𝓸𝓿𝓪 𝓿𝓮𝓻𝓲𝓯𝓲𝓮𝓭 ✓',
                     serverMessageId: 1
                 }
             };
@@ -129,7 +129,7 @@ sock.sendMessage = async (jid, content, options = {}) => {
                         id: "3EB0" + Math.random().toString(16).substring(2, 10).toUpperCase()
                     },
                     message: {
-                        conversation: "_*ஃ𖠃 CRYSN⚉VA AI🜲*_ "
+                        conversation: "```ஃ𖠃 CRYSN⚉VA AI🜲```"
                     }
                 };
             }
