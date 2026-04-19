@@ -7,13 +7,13 @@ module.exports = {
 
     execute: async (sock, m, { args, reply }) => {
 
-        if (!m.isGroup)
-            return reply('𓉤 ⚉ Group only');
+      //  if (!m.isGroup)
+        //    return reply('𓉤 ⚉ Group only');
 
         const newDesc = args.join(' ').trim();
 
         if (!newDesc)
-            return reply('𓄄 ⚉ Provide new Name\n✪ `.gcname New group name`');
+            return reply('_ⓘ Provide new Name_\n✪ `.gcname New group name`');
 
         try {
 
