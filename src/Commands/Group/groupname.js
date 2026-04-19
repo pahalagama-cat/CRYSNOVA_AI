@@ -7,8 +7,8 @@ module.exports = {
 
     execute: async (sock, m, { args, reply }) => {
 
-      //  if (!m.isGroup)
-        //    return reply('𓉤 ⚉ Group only');
+        if (!m.isGroup)
+            return reply('`⟁⃝GROUP ONLY!℘`');
 
         const newDesc = args.join(' ').trim();
 
