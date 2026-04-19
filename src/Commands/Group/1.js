@@ -122,7 +122,7 @@ module.exports = {
         } catch (err) {
 
             await sock.sendMessage(m.chat,{
-                react:{ text:"❌", key:m.key }
+                react:{ text:"⭕", key:m.key }
             })
 
             reply(
