@@ -7,14 +7,14 @@ module.exports = {
         try {
             const groupName = args.join(' ');
             if (!groupName) {
-                return reply('Please provide a group name.');
+                return reply('`ஃ𖠃 Group name.`');
             }
             
             const result = await sock.groupCreate(groupName, []);
-            reply(`Group "${result.subject}" created successfully!`);
+            reply(`_Group "${result.subject}" created successfully!_`);
         } catch (error) {
             console.error(error);
-            reply('An error occurred while creating the group. Please try again.');
+            reply('```An error occurred while creating the group. Please try again.```');
         }
     }
 };
