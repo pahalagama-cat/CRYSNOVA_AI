@@ -63,7 +63,7 @@ module.exports = {
     desc: 'Manage dual users (full owner-level access)',
     category: 'Owner',
     ownerOnly: true,
-    reactions: { start: '👑', success: '🌟' },
+    reactions: { start: '🔖', success: '⭐' },
 
     execute: async (sock, m, { args, reply }) => {
         const sub  = args[0]?.toLowerCase()
