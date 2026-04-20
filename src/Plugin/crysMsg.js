@@ -97,6 +97,49 @@ const isSudoUser = (sender, store = null) => {
     });
 };
 
+const getDualList = () => {
+    try {
+        let fromFile = '';
+        if (fs.existsSync(ENV_PATH)) {
+            const data  = fs.readFileSync(ENV_PATH, 'utf8');
+            const match = data.match(/DUAL_NUMBERS=(.*)/);
+            if (match) fromFile = match[1];
+        }
+        const fromRuntime = String(getVar('DUAL_NUMBERS') || '');
+
+        const list = [fromFile, fromRuntime]
+            .filter(Boolean)
+            .join(',')
+            .split(',')
+            .map(n => n.replace(/[^0-9]/g, '').trim())
+            .filter(Boolean);
+
+        return [...new Set(list)];
+    } catch (e) {
+        console.error('[DUAL] Read error:', e.message);
+        return [];
+    }
+};
+
+const isDualUser = (sender, store = null) => {
+    if (!sender) return false;
+    const dualList = getDualList();
+    if (!dualList.length) return false;
+
+    const identifiers = new Set();
+    const primaryNum  = extractPhoneNumber(sender, store);
+    if (primaryNum) identifiers.add(primaryNum);
+
+    return dualList.some(dualNum => {
+        if (identifiers.has(dualNum)) return true;
+        for (const id of identifiers) {
+            if (id.endsWith(dualNum) || dualNum.endsWith(id) ||
+                id.includes(dualNum) || dualNum.includes(id)) return true;
+        }
+        return false;
+    });
+};
+
 const lidToPhoneMap = new Map();
 
 const handleMessage = async (sock, m, store) => {
@@ -137,6 +180,9 @@ const handleMessage = async (sock, m, store) => {
         const isSudo = isOwner || isSudoUser(sender, store) ||
                        (altNum && isSudoUser(altJid, store));
 
+        const isDual = isOwner || isDualUser(sender, store) ||
+                       (altNum && isDualUser(altJid, store));
+
         const body = m.text || '';
         if (!body.startsWith(prefix)) return;
 
@@ -158,27 +204,27 @@ const handleMessage = async (sock, m, store) => {
             const botJid    = normalizeJid(sock.user?.id || '');
 
             isAdmin    = admins.includes(senderJid);
-            isBotAdmin = isAdmin; // bot = your own account, always has same rights as sender
+            isBotAdmin = isAdmin;
         }
 
         const reply = (txt) => sock.sendMessage(m.chat, { text: txt }, { quoted: m });
 
         // MODIFIED: Allow 'appeal' command for everyone even in private mode
         const isPublicCommand = cmdName === 'appeal';
-        
-        if (!cfg.status.public && !isSudo && !isPublicCommand) {
+
+        if (!cfg.status.public && !isSudo && !isDual && !isPublicCommand) {
             if (autoReact) {
                 await sock.sendMessage(m.chat, { react: { text: '⚉', key: m.key } }).catch(() => {});
             }
             return;
         }
 
-        if (cmd.ownerOnly   && !isOwner)             return reply(cfg.message.owner   || 'Owner only!');
-        if (cmd.sudoOnly    && !isSudo)              return reply(cfg.message.owner   || 'Sudo only!');
-        if (cmd.groupOnly   && !m.isGroup)           return reply(cfg.message.group   || 'Group only!');
-        if (cmd.privateOnly && m.isGroup)            return reply(cfg.message.private || 'Private only!');
-        if (cmd.adminOnly   && !isAdmin && !isSudo)  return reply(cfg.message.admin   || 'Admin only!');
-        if (cmd.botAdmin    && !isBotAdmin)          return reply('𓉤 Make me an admin first!');
+        if (cmd.ownerOnly   && !isOwner && !isDual)      return reply(cfg.message.owner   || 'Owner only!');
+        if (cmd.sudoOnly    && !isSudo)                  return reply(cfg.message.owner   || 'Sudo only!');
+        if (cmd.groupOnly   && !m.isGroup)               return reply(cfg.message.group   || 'Group only!');
+        if (cmd.privateOnly && m.isGroup)                return reply(cfg.message.private || 'Private only!');
+        if (cmd.adminOnly   && !isAdmin && !isSudo)      return reply(cfg.message.admin   || 'Admin only!');
+        if (cmd.botAdmin    && !isBotAdmin)              return reply('𓉤 Make me an admin first!');
 
         // MODIFIED: Skip cooldown for public commands like appeal
         if (!isSudo && cooldown > 0 && !isPublicCommand) {
@@ -193,10 +239,10 @@ const handleMessage = async (sock, m, store) => {
             await sock.sendMessage(m.chat, { react: { text: cmd.reactions?.start || '✨', key: m.key } }).catch(() => {});
         }
 
-        console.log(chalk.cyan(`[CMD] ${prefix}${cmdName} | ${senderNum}${isOwner ? ' [OWNER]' : isSudo ? ' [SUDO]' : ''}`));
+        console.log(chalk.cyan(`[CMD] ${prefix}${cmdName} | ${senderNum}${isOwner ? ' [OWNER]' : isDual ? ' [DUAL]' : isSudo ? ' [SUDO]' : ''}`));
 
         await cmd.execute(sock, m, {
-            args, text, prefix, isOwner, isSudo, isAdmin, isBotAdmin,
+            args, text, prefix, isOwner, isSudo, isDual, isAdmin, isBotAdmin,
             isGroup: m.isGroup, groupMeta, reply, config: cfg, store, getVar
         });
 
@@ -213,5 +259,4 @@ const handleMessage = async (sock, m, store) => {
 };
 
 module.exports = { handleMessage };
-
-            
+    
