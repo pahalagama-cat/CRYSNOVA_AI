@@ -99,7 +99,7 @@ module.exports = {
     category: 'Admin',
     groupOnly: true,
     adminOnly: true,
-    botAdmin: true,
+    botAdmin: false,
     reactions: { start: '🔇', success: '✦' },
 
     execute: async (sock, m, { args, reply }) => {
