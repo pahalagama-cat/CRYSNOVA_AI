@@ -430,6 +430,13 @@ if (afkUser && afkUser !== m.sender) {
                     }
                 }
             } catch {}
+            // Anti Spam
+try {
+    const antispam = require('./src/Commands/Admin/antispam.js');
+    if (antispam?.handleAntiSpam) await antispam.handleAntiSpam(sock, m);
+} catch (err) {
+    console.error('[ANTISPAM ERROR]', err.message);
+}
 
             // ── OWNER MENTION HANDLER ───────────────────────────────
             try {
