@@ -17,7 +17,7 @@
   <a href="https://github.com/crysnovax">
     <img
     <p align="center">
-  <img src="Logo.svg" alt="XXX" width="100%">
+  <img src="🔖.svg" alt="XXX" width="100%">
 </p>
       
       
