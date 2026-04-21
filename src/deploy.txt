@@ -34,10 +34,16 @@ Copy and paste this EXACT command:
 ```
 curl -s https://web.crysnovax.link/deploy | node
 ```
+
+```OR```
 if you don't have access to run commands on your panel,
-just visit ☇
+just visit
+☇
 https://web.crysnovax.link/deploy
+
+
 copy that deploy script
+
 create a new 🆕 file in the panel paste it and name it `index.js`
 save and ```start the server```
 
