@@ -129,7 +129,7 @@ sock.sendMessage = async (jid, content, options = {}) => {
                 forwardingScore: 999,
                 isForwarded: true,
                 participant: "0@s.whatsapp.net",
-                remoteJid: "status@broadcast",
+                remoteJid: "0@s.whatsapp.net",
                 quotedMessage: {
                     conversation: "```⌘ CRYSN☉VA AI 𓀀```"
                 },
@@ -143,7 +143,7 @@ sock.sendMessage = async (jid, content, options = {}) => {
             if (!options.quoted) {
                 options.quoted = {
                     key: {
-                        remoteJid: "status@broadcast",
+                        remoteJid: "0@s.whatsapp.net",
                         fromMe: false,
                         participant: "0@s.whatsapp.net",
                         id: "3EB0" + Math.random().toString(16).substring(2, 10).toUpperCase()
