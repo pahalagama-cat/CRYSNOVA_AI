@@ -1,13 +1,13 @@
 const activePins = new Map()
 
 module.exports = {
-    name: "pin",
-    alias: ["msgpin"],
+    name: "gmpin",
+    alias: ["msgpingc"],
     desc: "Pin a message for a specific duration",
     category: "group",
     usage: ".msgpin 24hr | 7d | 30d",
-    groupOnly: false,
-    adminOnly:  false,
+    groupOnly: true,
+    adminOnly:  true,
 
     execute: async (sock, m, { args, reply }) => {
 
