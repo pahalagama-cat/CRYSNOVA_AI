@@ -6,9 +6,9 @@ const DB = path.join(__dirname, '../../deploy.txt')
 if (!fs.existsSync(DB)) fs.writeFileSync(DB, '')
 
 module.exports = {
-name: 'deploy',
+name: 'note',
 alias: [],
-category: 'tools',
+category: 'Tools',
 desc: 'Save or return deploy script',
    // ⭐ Reaction config
     reactions: {
