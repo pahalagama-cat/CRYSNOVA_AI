@@ -2,40 +2,82 @@ const axios = require('axios');
 
 module.exports = {
     name: 'livematch',
-    alias: ['live', 'match'],
+    alias: ['live', 'match', 'football'],
+    desc: 'Get live football match scores',
     category: 'Sports',
+    usage: '.livematch [team] | .livematch premier | .livematch barcelona',
+    reactions: { start: '⚽', success: '✨', error: '❔' },
 
-    execute: async (sock, m, { args, reply }) => {
+    execute: async (sock, m, { args, reply, prefix }) => {
         try {
             const teamFilter = args.join(' ') || '';
-            // Use your Worker URL, pass team filter as query param
+            
+            await sock.sendMessage(m.chat, { react: { text: '⚽', key: m.key } });
+
             const url = `https://livematch.crysnovax.workers.dev/?team=${encodeURIComponent(teamFilter)}`;
             const res = await axios.get(url, {
-                headers: { 'Accept': 'application/json' } // ensures JSON response
+                headers: { 'Accept': 'application/json' },
+                timeout: 15000
             });
-            // Worker returns array directly, not { data: { matches: [...] } }
+
             const matches = res.data;
 
             if (!matches || matches.length === 0) {
-                return reply(`_*ಥ⁠‿⁠ಥ No live matches found*_`);
+                await sock.sendMessage(m.chat, { react: { text: '💤', key: m.key } });
+                return reply(`\`⚽ No live matches found${teamFilter ? ` for "${teamFilter}"` : ''}\``);
             }
 
-            let text = `⚽ *LIVE MATCHES*✐\n\n\n`;
+            // If no filter, show top 10 popular matches
+            const displayMatches = teamFilter ? matches : matches.slice(0, 10);
 
-            matches.forEach((match, i) => {
-                text += `*𓊈𝑽꯭𝑰꯭𝑷ࠡࠡࠡࠡࠢ𓊉${i + 1}. ${match.team1} vs ${match.team2}*\n`;
-                text += `𓄂ᬼ𓆃 League: ${match.league || 'N/A'}\n`;
-                text += `❏◦◦◦◦◦◦Status: ${match.status || 'N/A'}\n`;
-                text += `彡.... Score: ${match.score || '0 - 0'}\n`;
-                if (match.time) text += `✧⋆⁩⁩⋆⁩⁩Time: ${match.time}\n`;
-                text += `\n\n`;
-            });
+            if (displayMatches.length === 1) {
+                // Single match - detailed view
+                const m = displayMatches[0];
+                
+                await sock.sendMessage(m.chat, {
+                    headerText: `## ⚽ ${m.team1} vs ${m.team2}`,
+                    contentText: '---',
+                    title: '📊 Match Details',
+                    table: [
+                        ['🏆 League', m.league || 'N/A'],
+                        ['📊 Status', m.status || 'N/A'],
+                        ['⚽ Score', m.score || '0 - 0'],
+                        ['⏱️ Time', m.time || 'N/A']
+                    ],
+                    footerText: '💡 Live scores • Powered by CRYSNOVA AI'
+                }, { quoted: m });
+            } else {
+                // Multiple matches - table view
+                const tableData = [['#', '⚽ Match', '🏆 League', '📊 Score']];
+                
+                for (let i = 0; i < displayMatches.length; i++) {
+                    const match = displayMatches[i];
+                    const teams = `${match.team1.slice(0, 12)} vs ${match.team2.slice(0, 12)}`;
+                    const league = (match.league || 'N/A').slice(0, 15);
+                    const score = match.score || '0 - 0';
+                    
+                    tableData.push([`${i + 1}`, teams, league, score]);
+                }
 
-            await sock.sendMessage(m.chat, { text: text.trim() }, { quoted: m });
+                const headerText = teamFilter 
+                    ? `## ⚽ Results for "${teamFilter}"`
+                    : `## ⚽ Live Matches`;
+
+                await sock.sendMessage(m.chat, {
+                    headerText: headerText,
+                    contentText: '---',
+                    title: `📊 ${displayMatches.length} Match${displayMatches.length > 1 ? 'es' : ''}`,
+                    table: tableData,
+                    footerText: `💡 SWIPE ⇆ • Use ${prefix}livematch <team> to search`
+                }, { quoted: m });
+            }
+
+            await sock.sendMessage(m.chat, { react: { text: '🔖', key: m.key } });
 
         } catch (err) {
-            console.log(err);
-            reply('_*ⓘ Failed to fetch live matches*_');
+            console.error('[LIVEMATCH ERROR]', err.message);
+            await sock.sendMessage(m.chat, { react: { text: '🙊', key: m.key } });
+            reply('`✘ Failed to fetch live matches`');
         }
     }
 };
