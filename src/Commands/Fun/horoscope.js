@@ -56,7 +56,7 @@ module.exports = {
                 footerText: `💡 Tomorrow: ${prefix}horoscope ${sign}`
             }, { quoted: m });
 
-            await sock.sendMessage(m.chat, { react: { text: '👽, key: m.key } });
+            await sock.sendMessage(m.chat, { react: { text: '👽', key: m.key } });
 
         } catch (error) {
             await sock.sendMessage(m.chat, { react: { text: '🏗️', key: m.key } });
