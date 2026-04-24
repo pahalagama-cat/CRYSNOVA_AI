@@ -1,134 +1,107 @@
-/**
- * .settmd command - Set default region for time display
- * Usage: .settmd <region> (e.g., .settmd Lagos)
- */
-
+const axios = require('axios');
 const fs = require('fs');
 const path = require('path');
-const { getTimezone, getPopularRegions, getTimeData } = require('../Core/®.js');
 
-const DB_PATH = path.join(__dirname, '../../database/timezones.json');
+const DB_PATH = path.join(process.cwd(), 'database', 'timezones.json');
 
-const getDB = () => {
-    if (!fs.existsSync(path.dirname(DB_PATH))) {
-        fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-    }
-    if (!fs.existsSync(DB_PATH)) {
-        fs.writeFileSync(DB_PATH, '{}');
-    }
-    return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+function getDB() {
+    try {
+        if (!fs.existsSync(path.dirname(DB_PATH))) fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+        if (!fs.existsSync(DB_PATH)) fs.writeFileSync(DB_PATH, '{}');
+        return JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+    } catch { return {}; }
+}
+
+function saveDB(data) { fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2)); }
+
+const TIMEZONES = {
+    'lagos': 'Africa/Lagos', 'london': 'Europe/London', 'new york': 'America/New_York',
+    'tokyo': 'Asia/Tokyo', 'dubai': 'Asia/Dubai', 'paris': 'Europe/Paris',
+    'mumbai': 'Asia/Kolkata', 'sydney': 'Australia/Sydney', 'berlin': 'Europe/Berlin'
 };
 
-const saveDB = (data) => {
-    fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2));
-};
+function getTimezone(region) {
+    const key = region.toLowerCase().trim();
+    return TIMEZONES[key] || region;
+}
 
 module.exports = {
     name: 'settmd',
     alias: ['settime', 'settimezone', 'st'],
-    category: 'Utility',
-    desc: 'Set your default region for time display',
-    usage: '.settmd <region> (e.g., .settmd Lagos)',
-    
-    reactions: {
-        start: '⏰',
-        success: '✅',
-        error: '❌'
-    },
+    desc: 'Set your default timezone',
+    category: 'Info',
+    usage: '.settmd <region>',
+    reactions: { start: '⏰', success: '🔖', error: '❔' },
 
-    execute: async (sock, m, { args, reply }) => {
+    execute: async (sock, m, { args, reply, prefix }) => {
         const region = args.join(' ').trim();
         
         if (!region) {
-            const popular = getPopularRegions();
+            const popular = Object.keys(TIMEZONES).slice(0, 8).map(r => r.charAt(0).toUpperCase() + r.slice(1));
             return reply(
-                `╭─❍ *CRYSNOVA TIME* 𓉤\n` +
-                `│ ⚉ Usage: .settmd <region>\n│\n` +
-                `│ This sets your default timezone.\n` +
-                `│ Then use .tmd to check time instantly.\n│\n` +
-                `│ Examples:\n` +
-                `│ • .settmd Lagos\n` +
-                `│ • .settmd London\n` +
-                `│ • .settmd "New York"\n│\n` +
-                `│ Popular: ${popular.slice(0, 8).join(', ')}\n` +
-                `╰────────────────`
+                `╭─❍ *SET DEFAULT TIME*\n│\n` +
+                `│ ⚉ *Usage:* ${prefix}settmd <region>\n│\n` +
+                `│ ✪ *Popular:*\n` +
+                `│ ${popular.join(', ')}\n│\n` +
+                `│ Then use .tmd anytime!\n` +
+                `╰──────────────────`
             );
         }
 
-        await reply(`_⏰ Verifying "${region}"..._`);
+        await sock.sendMessage(m.chat, { react: { text: '⏰', key: m.key } });
+
+        const timezone = getTimezone(region);
+        const userId = m.sender;
 
         try {
-            const timezone = getTimezone(region);
-            
-            if (!timezone) {
-                return reply(
-                    `╭─❍ *CRYSNOVA TIME* 𓉤\n` +
-                    `│ ⚉ Invalid region: "${region}"\n│\n` +
-                    `│ Try common names like:\n` +
-                    `│ Lagos, London, Dubai, Tokyo,\n` +
-                    `│ New York, Paris, Mumbai...\n` +
-                    `╰────────────────`
-                );
-            }
-
-            // Verify with retry and fallback
-            const { source, data } = await getTimeData(timezone);
-            console.log(`[SETTMD] Verified via: ${source}`);
-            
+            const res = await axios.get(`https://worldtimeapi.org/api/timezone/${encodeURIComponent(timezone)}`, { timeout: 8000 });
+            const data = res.data;
             const datetime = new Date(data.datetime);
-            const timeString = datetime.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
-                minute: '2-digit',
-                hour12: true 
-            });
+            const timeString = datetime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-            // Save to database
             const db = getDB();
-            const userId = m.sender || m.key?.participant || m.key?.remoteJid;
-            
             db[userId] = region;
             saveDB(db);
 
-            const sourceNote = source !== 'worldtimeapi' ? `\n│ 📡 Verified via: ${source}` : '';
+            await sock.sendMessage(m.chat, {
+                headerText: `## ✨ Default Time Set`,
+                contentText: '---',
+                title: '⏰ Your Default Region',
+                table: [
+                    ['📍 Region', data.timezone.replace(/_/g, ' ')],
+                    ['🕐 Current Time', timeString],
+                    ['📊 UTC', `UTC${data.utc_offset}`],
+                    ['📝 Usage', 'Use .tmd anytime!']
+                ],
+                footerText: '💡 .tmd shows your time instantly'
+            }, { quoted: m });
 
-            await reply(
-                `╭─❍ *CRYSNOVA TIME* 𓉤\n` +
-                `│ ✅ Default region set!\n│\n` +
-                `│ 📍 ${data.timezone.replace(/_/g, ' ')}\n` +
-                `│ 🕐 ${timeString}${sourceNote}\n│\n` +
-                `│ Use .tmd anytime to check.\n` +
-                `╰────────────────`
-            );
+            await sock.sendMessage(m.chat, { react: { text: '✨', key: m.key } });
 
         } catch (err) {
-            console.error('[SETTMD ERROR]', err.message);
-            
-            // Even if API fails, allow setting if region is valid
-            const timezone = getTimezone(region);
+            // Save even if API fails
             if (timezone) {
                 const db = getDB();
-                const userId = m.sender || m.key?.participant || m.key?.remoteJid;
                 db[userId] = region;
                 saveDB(db);
-                
-                return reply(
-                    `╭─❍ *CRYSNOVA TIME* 𓉤\n` +
-                    `│ ✅ Default region set (offline mode)\n│\n` +
-                    `│ 📍 ${timezone.replace(/_/g, ' ')}\n│\n` +
-                    `│ ⚠️ Couldn't verify with API\n` +
-                    `│ Will sync when online.\n│\n` +
-                    `│ Use .tmd to check time.\n` +
-                    `╰────────────────`
-                );
+
+                await sock.sendMessage(m.chat, {
+                    headerText: `## 📅 Default Time Set`,
+                    contentText: '---',
+                    title: '⏰ Offline Mode',
+                    table: [
+                        ['📍 Region', timezone.replace(/_/g, ' ')],
+                        ['📝 Status', 'Saved (offline)'],
+                        ['📝 Usage', 'Use .tmd anytime!']
+                    ],
+                    footerText: '💡 Will sync when API is available'
+                }, { quoted: m });
+
+                await sock.sendMessage(m.chat, { react: { text: '✨', key: m.key } });
+            } else {
+                await sock.sendMessage(m.chat, { react: { text: '🏗️', key: m.key } });
+                reply('`✘ Invalid region. Try: Lagos, London, Tokyo...`');
             }
-            
-            reply(
-                `╭─❍ *CRYSNOVA TIME* 𓉤\n` +
-                `│ ⚉ Failed to verify region\n│\n` +
-                `│ ${err.message.substring(0, 100)}\n│\n` +
-                `│ Try again later or check spelling.\n` +
-                `╰────────────────`
-            );
         }
     }
 };
