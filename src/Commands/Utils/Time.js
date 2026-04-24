@@ -1,4 +1,6 @@
 const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
 
 // Popular timezones mapping
 const TIMEZONES = {
@@ -19,7 +21,6 @@ const TIMEZONES = {
     'moscow': 'Europe/Moscow',
     'rio': 'America/Sao_Paulo',
     'beijing': 'Asia/Shanghai',
-    'shanghai': 'Asia/Shanghai',
     'cairo': 'Africa/Cairo',
     'nairobi': 'Africa/Nairobi',
     'accra': 'Africa/Accra',
@@ -30,7 +31,23 @@ const TIMEZONES = {
 function getTimezone(region) {
     const key = region.toLowerCase().trim();
     if (TIMEZONES[key]) return TIMEZONES[key];
-    return region; // Try as raw timezone
+    return region;
+}
+
+async function getTimeData(timezone) {
+    // Try WorldTimeAPI first
+    try {
+        const res = await axios.get(`https://worldtimeapi.org/api/timezone/${encodeURIComponent(timezone)}`, { timeout: 8000 });
+        return { source: 'worldtimeapi', data: res.data };
+    } catch (e) {
+        // Fallback to Core
+        try {
+            const core = require('../Core/®.js');
+            return await core.getTimeData(timezone);
+        } catch (e2) {
+            throw new Error('All time sources failed');
+        }
+    }
 }
 
 module.exports = {
@@ -39,7 +56,7 @@ module.exports = {
     desc: 'Show current time for any region',
     category: 'Info',
     usage: '.tm <region>',
-    reactions: { start: '⏰', success: '📅', error: '❔' },
+    reactions: { start: '⏰', success: '🥏', error: '❔' },
 
     execute: async (sock, m, { args, reply, prefix }) => {
         const region = args.join(' ').trim();
@@ -60,60 +77,36 @@ module.exports = {
 
         try {
             const timezone = getTimezone(region);
+            const { source, data } = await getTimeData(timezone);
             
-            const response = await axios.get(`https://worldtimeapi.org/api/timezone/${encodeURIComponent(timezone)}`, {
-                timeout: 10000
-            });
-
-            const data = response.data;
             const datetime = new Date(data.datetime);
-            
-            const timeString = datetime.toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-                hour12: true
-            });
-            
-            const dateString = datetime.toLocaleDateString('en-US', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-
-            const regionName = data.timezone.split('/').pop().replace(/_/g, ' ');
-            const gmtOffset = data.utc_offset;
+            const timeString = datetime.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+            const dateString = datetime.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            const regionName = (data.timezone || timezone).split('/').pop().replace(/_/g, ' ');
+            const sourceNote = source !== 'worldtimeapi' ? ` (via ${source})` : '';
 
             await sock.sendMessage(m.chat, {
                 headerText: `## 🕐 ${regionName}`,
                 contentText: '---',
-                title: '📊 Time Details',
+                title: `📊 Time Details${sourceNote}`,
                 table: [
                     ['⏰ Current Time', timeString],
                     ['📅 Date', dateString],
-                    ['🌍 Timezone', data.timezone],
-                    ['📊 UTC Offset', `UTC${gmtOffset}`],
-                    ['🏷️ Abbreviation', data.abbreviation],
+                    ['🌍 Timezone', data.timezone || timezone],
+                    ['📊 UTC Offset', `UTC${data.utc_offset || data.utcOffset || 'N/A'}`],
+                    ['🏷️ Abbreviation', data.abbreviation || 'N/A'],
                     ['☀️ DST', data.dst ? 'Active 🎭' : 'Inactive 💤'],
-                    ['📅 Day of Year', `Day ${data.day_of_year} / Week ${data.week_number}`]
+                    ['📅 Day of Year', `Day ${data.day_of_year || 'N/A'} / Week ${data.week_number || 'N/A'}`]
                 ],
-                footerText: '💡 SWIPE ⇆ for details • Powered by CRYSNOVA AI'
+                footerText: '💡 SWIPE ⇆ for details • Set default: .settmd <region>'
             }, { quoted: m });
 
-            await sock.sendMessage(m.chat, { react: { text: '📅', key: m.key } });
+            await sock.sendMessage(m.chat, { react: { text: '🔖', key: m.key } });
 
         } catch (error) {
             console.error('[TM ERROR]', error.message);
-            await sock.sendMessage(m.chat, { react: { text: '🙊', key: m.key } });
-            
-            reply(
-                `╭─❍ *WORLD TIME*\n│\n` +
-                `│ ✘ *Region not found:* "${region}"\n│\n` +
-                `│ Try: Lagos, London, New York, Tokyo,\n` +
-                `│ Dubai, Paris, Berlin, Mumbai...\n` +
-                `╰──────────────────`
-            );
+            await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
+            reply(`\`✘ Region not found. Try: Lagos, London, Tokyo, Dubai...\``);
         }
     }
 };
