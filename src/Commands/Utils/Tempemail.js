@@ -1,119 +1,149 @@
-const fetch = require("node-fetch")
+const fetch = require('node-fetch');
 
 module.exports = {
-name: "tempemail",
-alias: ["tmpmail","tempmail"],
-category: "tools",
-desc: "Create temp email and receive OTP",
+    name: 'tempemail',
+    alias: ['tmpmail', 'tempmail', 'tempm'],
+    category: 'Tools',
+    desc: 'Create temporary email and receive OTP/messages',
+    usage: '.tempemail | .tempemail check | .tempemail read <id>',
+    reactions: { start: '📧', success: '🥏', error: '❔' },
 
-execute: async (sock, m, { args, reply, prefix }) => {
+    execute: async (sock, m, { args, reply, prefix }) => {
+        try {
+            const action = args[0];
+            if (!global.mailtm) global.mailtm = {};
 
-try {
+            // ── CREATE EMAIL ──────────────────────────────────────
+            if (!action || action === 'create') {
+                const d = await fetch('https://api.mail.tm/domains');
+                const domainData = await d.json();
+                const domain = domainData['hydra:member'][0].domain;
+                const user = Math.random().toString(36).slice(2, 10);
+                const email = `${user}@${domain}`;
+                const password = 'pass123456';
 
-const action = args[0]
+                await fetch('https://api.mail.tm/accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: email, password })
+                });
 
-if (!global.mailtm) global.mailtm = {}
+                const tokenReq = await fetch('https://api.mail.tm/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ address: email, password })
+                });
 
+                const tokenData = await tokenReq.json();
+                global.mailtm[m.sender] = { email, token: tokenData.token };
 
-// CREATE EMAIL
-if (!action || action === "create") {
+                await sock.sendMessage(m.chat, { react: { text: '📧', key: m.key } });
 
-const d = await fetch("https://api.mail.tm/domains")
-const domainData = await d.json()
+                await sock.sendMessage(m.chat, {
+                    headerText: `## 📧 Temp Email Created`,
+                    contentText: '---',
+                    title: '📋 Your Email',
+                    table: [
+                        ['📧 Email', email],
+                        ['🔑 Password', password],
+                        ['📝 Commands', `${prefix}tempemail check`],
+                        ['📖 Read', `${prefix}tempemail read <id>`]
+                    ],
+                    footerText: '💡 Use this for OTP / verification'
+                }, { quoted: m });
 
-const domain = domainData["hydra:member"][0].domain
-const user = Math.random().toString(36).slice(2,10)
+                return;
+            }
 
-const email = `${user}@${domain}`
-const password = "pass123456"
+            // ── CHECK INBOX ──────────────────────────────────────
+            if (action === 'check') {
+                const data = global.mailtm[m.sender];
+                if (!data) return reply('`✘ Create email first: .tempemail`');
 
-await fetch("https://api.mail.tm/accounts",{
-method:"POST",
-headers:{ "Content-Type":"application/json"},
-body: JSON.stringify({address:email,password})
-})
+                const res = await fetch('https://api.mail.tm/messages', {
+                    headers: { Authorization: `Bearer ${data.token}` }
+                });
 
-const tokenReq = await fetch("https://api.mail.tm/token",{
-method:"POST",
-headers:{ "Content-Type":"application/json"},
-body: JSON.stringify({address:email,password})
-})
+                const inbox = await res.json();
 
-const tokenData = await tokenReq.json()
+                if (!inbox['hydra:member'].length) {
+                    await sock.sendMessage(m.chat, { react: { text: '📭', key: m.key } });
+                    return reply('`📭 Inbox empty`');
+                }
 
-global.mailtm[m.sender] = {
-email,
-token: tokenData.token
-}
+                const tableData = [['#', '📧 Subject', '👤 From']];
+                
+                inbox['hydra:member'].slice(0, 10).forEach((mail, i) => {
+                    const subject = (mail.subject || 'No subject').slice(0, 30);
+                    const from = (mail.from?.address || 'Unknown').slice(0, 25);
+                    tableData.push([`${i + 1}`, subject, from]);
+                });
 
-reply(`📧 TEMP EMAIL
+                await sock.sendMessage(m.chat, {
+                    headerText: `## 📬 Inbox`,
+                    contentText: '---',
+                    title: `📋 ${inbox['hydra:member'].length} Messages`,
+                    table: tableData,
+                    footerText: `💡 Use ${prefix}tempemail read <number> to view`
+                }, { quoted: m });
 
-Email:
-${email}
+                return;
+            }
 
-Commands
-${prefix}tempemail check
-${prefix}tempemail read <id>`)
+            // ── READ MESSAGE ─────────────────────────────────────
+            if (action === 'read') {
+                const id = args[1];
+                if (!id) return reply('`✘ Provide message number: .tempemail read 1`');
 
-}
+                const data = global.mailtm[m.sender];
+                if (!data) return reply('`✘ Create email first: .tempemail`');
 
+                // Get inbox to map number to ID
+                const inboxRes = await fetch('https://api.mail.tm/messages', {
+                    headers: { Authorization: `Bearer ${data.token}` }
+                });
+                const inbox = await inboxRes.json();
+                
+                const num = parseInt(id);
+                if (!num || num < 1 || num > inbox['hydra:member'].length) {
+                    return reply(`\`✘ Invalid number. Inbox has ${inbox['hydra:member'].length} messages\``);
+                }
 
-// CHECK INBOX
-else if (action === "check") {
+                const mailId = inbox['hydra:member'][num - 1].id;
+                const res = await fetch(`https://api.mail.tm/messages/${mailId}`, {
+                    headers: { Authorization: `Bearer ${data.token}` }
+                });
+                const mail = await res.json();
 
-const data = global.mailtm[m.sender]
-if (!data) return reply("Create email first")
+                await sock.sendMessage(m.chat, {
+                    headerText: `## 📧 Message ${id}`,
+                    contentText: '---',
+                    title: '📋 Details',
+                    table: [
+                        ['👤 From', mail.from?.address || 'Unknown'],
+                        ['📧 Subject', mail.subject || 'No subject'],
+                        ['📝 Body', (mail.text || mail.html || 'No content').replace(/<[^>]*>/g, '').slice(0, 500)]
+                    ],
+                    footerText: '💡 Temp email • Auto-destroys after inactivity'
+                }, { quoted: m });
 
-const res = await fetch("https://api.mail.tm/messages",{
-headers:{ Authorization:`Bearer ${data.token}` }
-})
+                return;
+            }
 
-const inbox = await res.json()
+            // ── HELP ─────────────────────────────────────────────
+            return reply(
+                `╭─❍ *TEMP EMAIL*\n│\n` +
+                `│ ⚉ *Commands:*\n` +
+                `│ • ${prefix}tempemail → Create\n` +
+                `│ • ${prefix}tempemail check → Inbox\n` +
+                `│ • ${prefix}tempemail read <id> → View\n` +
+                `╰──────────────────`
+            );
 
-if (!inbox["hydra:member"].length)
-return reply("📭 Inbox empty")
-
-let msg = "📬 INBOX\n\n"
-
-inbox["hydra:member"].slice(0,5).forEach((mail,i)=>{
-msg += `${i+1}. ${mail.subject}\nFrom: ${mail.from.address}\nID: ${mail.id}\n\n`
-})
-
-reply(msg)
-
-}
-
-
-// READ MESSAGE
-else if (action === "read") {
-
-const id = args[1]
-if (!id) return reply("Provide message id")
-
-const data = global.mailtm[m.sender]
-if (!data) return reply("Create email first")
-
-const res = await fetch(`https://api.mail.tm/messages/${id}`,{
-headers:{ Authorization:`Bearer ${data.token}` }
-})
-
-const mail = await res.json()
-
-reply(`📧 MESSAGE
-
-From: ${mail.from.address}
-Subject: ${mail.subject}
-
-${mail.text}`)
-
-}
-
-} catch(e){
-
-console.error(e)
-reply("❌ Temp mail error")
-
-}
-
-}
-}
+        } catch (e) {
+            console.error('[TEMPMAIL ERROR]', e);
+            await sock.sendMessage(m.chat, { react: { text: '🙊', key: m.key } });
+            reply('`✘ Temp mail error`');
+        }
+    }
+};
