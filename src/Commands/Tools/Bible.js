@@ -1,12 +1,12 @@
 const axios = require('axios');
 
-// Book name mappings — including Roman numeral variants
+// Book mappings remain the same
 const BOOK_MAP = {
     'gen': 'Genesis', 'exo': 'Exodus', 'lev': 'Leviticus', 'num': 'Numbers',
     'deut': 'Deuteronomy', 'josh': 'Joshua', 'judg': 'Judges', 'ruth': 'Ruth',
     '1sam': '1 Samuel', '2sam': '2 Samuel', '1kgs': '1 Kings', '2kgs': '2 Kings',
     '1chr': '1 Chronicles', '2chr': '2 Chronicles', 'ezra': 'Ezra', 'neh': 'Nehemiah',
-    'esth': 'Esther', 'job': 'Job', 'ps': 'Psalms', 'prov': 'Proverbs',
+    'esth': 'Esther', 'job': 'Job', 'ps': 'Psalms', 'psalm': 'Psalms', 'prov': 'Proverbs',
     'eccl': 'Ecclesiastes', 'song': 'Song of Solomon', 'isa': 'Isaiah', 'jer': 'Jeremiah',
     'lam': 'Lamentations', 'ezek': 'Ezekiel', 'dan': 'Daniel', 'hos': 'Hosea',
     'joel': 'Joel', 'amos': 'Amos', 'obad': 'Obadiah', 'jonah': 'Jonah',
@@ -18,154 +18,193 @@ const BOOK_MAP = {
     '1thess': '1 Thessalonians', '2thess': '2 Thessalonians', '1tim': '1 Timothy',
     '2tim': '2 Timothy', 'titus': 'Titus', 'philem': 'Philemon', 'heb': 'Hebrews',
     'jas': 'James', '1pet': '1 Peter', '2pet': '2 Peter', '1john': '1 John',
-    '2john': '2 John', '3john': '3 John', 'jude': 'Jude', 'rev': 'Revelation',
-    // Roman numeral II = 2, III = 3
-    'iitim': '2 Timothy', 'iiitim': '3 John', 'iijohn': '3 John',
-    '1st': '1', '2nd': '2', '3rd': '3'
+    '2john': '2 John', '3john': '3 John', 'jude': 'Jude', 'rev': 'Revelation'
 };
 
-// Roman numeral converter
-function normalizeRoman(str) {
-    return str.toLowerCase()
-        .replace(/^ii$/i, '2')
-        .replace(/^iii$/i, '3')
-        .replace(/^iv$/i, '4');
-}
+const API_BOOK_MAP = {
+    'genesis': 'Genesis', 'exodus': 'Exodus', 'leviticus': 'Leviticus', 'numbers': 'Numbers',
+    'deuteronomy': 'Deuteronomy', 'joshua': 'Joshua', 'judges': 'Judges', 'ruth': 'Ruth',
+    '1 samuel': '1 Samuel', '2 samuel': '2 Samuel', '1 kings': '1 Kings', '2 kings': '2 Kings',
+    '1 chronicles': '1 Chronicles', '2 chronicles': '2 Chronicles', 'ezra': 'Ezra', 'nehemiah': 'Nehemiah',
+    'esther': 'Esther', 'job': 'Job', 'psalms': 'Psalms', 'psalm': 'Psalms', 'proverbs': 'Proverbs',
+    'ecclesiastes': 'Ecclesiastes', 'song of solomon': 'Song of Solomon', 'isaiah': 'Isaiah', 'jeremiah': 'Jeremiah',
+    'lamentations': 'Lamentations', 'ezekiel': 'Ezekiel', 'daniel': 'Daniel', 'hosea': 'Hosea',
+    'joel': 'Joel', 'amos': 'Amos', 'obadiah': 'Obadiah', 'jonah': 'Jonah',
+    'micah': 'Micah', 'nahum': 'Nahum', 'habakkuk': 'Habakkuk', 'zephaniah': 'Zephaniah',
+    'haggai': 'Haggai', 'zechariah': 'Zechariah', 'malachi': 'Malachi',
+    'matthew': 'Matthew', 'mark': 'Mark', 'luke': 'Luke', 'john': 'John',
+    'acts': 'Acts', 'romans': 'Romans', '1 corinthians': '1 Corinthians', '2 corinthians': '2 Corinthians',
+    'galatians': 'Galatians', 'ephesians': 'Ephesians', 'philippians': 'Philippians', 'colossians': 'Colossians',
+    '1 thessalonians': '1 Thessalonians', '2 thessalonians': '2 Thessalonians', '1 timothy': '1 Timothy',
+    '2 timothy': '2 Timothy', 'titus': 'Titus', 'philemon': 'Philemon', 'hebrews': 'Hebrews',
+    'james': 'James', '1 peter': '1 Peter', '2 peter': '2 Peter', '1 john': '1 John',
+    '2 john': '2 John', '3 john': '3 John', 'jude': 'Jude', 'revelation': 'Revelation'
+};
 
 function parseReference(text) {
-    const parts = text.trim().split(/\s+/);
-    if (parts.length < 2) return null;
+    const input = text.trim();
+    const normalized = input.toLowerCase().replace(/\s+/g, ' ').trim();
     
-    // Normalize first word if it's a Roman numeral
-    parts[0] = normalizeRoman(parts[0]);
+    const match = normalized.match(/^(\d?\s*[a-z]+)\s+(\d+)[\s:](\d+)(?:\s*-\s*(\d+))?$/);
     
-    // Find where numbers start
-    let bookEnd = 0;
-    for (let i = 0; i < parts.length; i++) {
-        if (/^\d/.test(parts[i]) || parts[i].includes(':')) {
-            bookEnd = i;
-            break;
+    if (!match) {
+        const altMatch = normalized.match(/^(\d?[a-z]+)\s+(\d+)[\s:](\d+)(?:\s*-\s*(\d+))?$/);
+        if (!altMatch) return null;
+        
+        const bookPart = altMatch[1];
+        const chapter = parseInt(altMatch[2]);
+        const verse = parseInt(altMatch[3]);
+        const endVerse = altMatch[4] ? parseInt(altMatch[4]) : null;
+        
+        let fullBook = BOOK_MAP[bookPart] || API_BOOK_MAP[bookPart];
+        let apiBook = bookPart;
+        
+        if (!fullBook) {
+            const numPrefix = bookPart.match(/^(\d)([a-z]+)$/);
+            if (numPrefix) {
+                const spaced = `${numPrefix[1]} ${numPrefix[2]}`;
+                fullBook = API_BOOK_MAP[spaced];
+                if (fullBook) apiBook = spaced;
+            }
         }
-        bookEnd = i + 1;
+        
+        if (!fullBook) {
+            fullBook = bookPart.charAt(0).toUpperCase() + bookPart.slice(1);
+        }
+        
+        return { book: apiBook, fullBook, chapter, verse, endVerse, isRange: !!endVerse };
     }
     
-    let book = parts.slice(0, bookEnd).join('').toLowerCase();
-    const reference = parts.slice(bookEnd).join('');
+    const bookPart = match[1].trim();
+    const chapter = parseInt(match[2]);
+    const verse = parseInt(match[3]);
+    const endVerse = match[4] ? parseInt(match[4]) : null;
     
-    // Parse chapter:verse or chapter:verse-range
-    const match = reference.match(/(\d+)[:\s](\d+)(?:\s*-\s*(\d+))?/);
-    if (!match) return null;
+    const bookNoSpace = bookPart.replace(/\s/g, '');
+    let fullBook = BOOK_MAP[bookNoSpace] || API_BOOK_MAP[bookPart];
+    let apiBook = bookPart;
     
-    const chapter = parseInt(match[1]);
-    const verse = parseInt(match[2]);
-    const endVerse = match[3] ? parseInt(match[3]) : null;
+    if (!fullBook) {
+        fullBook = bookPart.charAt(0).toUpperCase() + bookPart.slice(1);
+    }
     
-    const fullBook = BOOK_MAP[book] || book.charAt(0).toUpperCase() + book.slice(1);
+    return { book: apiBook, fullBook, chapter, verse, endVerse, isRange: !!endVerse };
+}
+
+// Split long text into chunks
+function splitVerses(verses, maxLen = 300) {
+    const chunks = [];
+    let currentChunk = '';
     
-    return { book, fullBook, chapter, verse, endVerse };
+    for (const v of verses) {
+        const line = `[${v.verse}] ${v.text.replace(/\n/g, ' ').trim()}\n\n`;
+        if ((currentChunk + line).length > maxLen && currentChunk) {
+            chunks.push(currentChunk.trim());
+            currentChunk = line;
+        } else {
+            currentChunk += line;
+        }
+    }
+    if (currentChunk) chunks.push(currentChunk.trim());
+    return chunks;
 }
 
 module.exports = {
     name: 'bible',
     alias: ['verse', 'scripture', 'bibleverse'],
-    desc: 'Get Bible verses in premium format (with range support)',
+    desc: 'Get Bible verses in premium format (auto-splits long text)',
     category: 'Search',
-    usage: '.bible John 3:16 | .bible II Timothy 3:15-21 | .bible books',
+    usage: '.bible John 3:16 | .bible 2 Timothy 3:15-21 | .bible ps 23 1',
     reactions: { start: '📖', success: '✨', error: '❔' },
 
     execute: async (sock, m, { args, reply, prefix }) => {
-        const text = args.join(' ').trim().toLowerCase();
+        const text = args.join(' ').trim();
         
         if (!text) {
             return reply(
                 `╭─❍ *BIBLE VERSE*\n│\n` +
-                `│ ⚉ *Usage:* ${prefix}bible <reference>\n│\n` +
-                `│ ✪ *Examples:*\n` +
-                `│ ${prefix}bible John 3:16\n` +
-                `│ ${prefix}bible ps 23 1-3\n` +
-                `│ ${prefix}bible II Timothy 3:15-21\n` +
-                `│ ${prefix}bible books\n│\n` +
+                `│ ⚉ ${prefix}bible <reference>\n│\n` +
+                `│ ✪ John 3:16 | 2 Timothy 3:15-21\n│\n` +
                 `│ 📖 *Holy Bible (KJV)*\n` +
                 `╰──────────────────`
             );
         }
 
-        // ── LIST BOOKS ───────────────────────────────────────
-        if (text === 'books' || text === 'list') {
-            const books = Object.entries(BOOK_MAP)
-                .filter(([k]) => !k.includes('iitim') && !k.includes('iiitim') && !k.includes('1st') && k.length <= 5)
-                .map(([, name]) => name);
-
-            const tableData = [['📖 Book', '📖 Book']];
-            for (let i = 0; i < books.length; i += 2) {
-                tableData.push([books[i] || '', books[i + 1] || '']);
-            }
-
-            await sock.sendMessage(m.chat, {
-                headerText: `## 📖 Books of the Bible`,
-                contentText: '---',
-                title: '📜 All 66 Books',
-                table: tableData,
-                footerText: `💡 Use ${prefix}bible <book> <ch:vs> for verses`
-            }, { quoted: m });
-
-            await sock.sendMessage(m.chat, { react: { text: '✨', key: m.key } });
-            return;
-        }
-
         const ref = parseReference(text);
-        if (!ref) return reply('`✘ Invalid format. Use: John 3:16 or II Timothy 3:15-21`');
+        if (!ref) return reply('`✘ Invalid format. Use: John 3:16 or 2 Timothy 3:15-21`');
 
         await sock.sendMessage(m.chat, { react: { text: '📖', key: m.key } });
 
         try {
-            let referenceStr;
-            if (ref.endVerse && ref.endVerse !== ref.verse) {
-                referenceStr = `${ref.book}+${ref.chapter}:${ref.verse}-${ref.endVerse}`;
+            // Fetch verses - for ranges, get individual verses
+            let verses = [];
+            
+            if (ref.isRange) {
+                for (let v = ref.verse; v <= ref.endVerse; v++) {
+                    try {
+                        const res = await axios.get(
+                            `https://bible-api.com/${encodeURIComponent(ref.fullBook)}+${ref.chapter}:${v}`,
+                            { params: { translation: 'kjv' }, timeout: 8000, headers: { 'Accept': 'application/json' } }
+                        );
+                        if (res.data?.verses?.length) {
+                            verses.push(res.data.verses[0]);
+                        }
+                    } catch {}
+                }
             } else {
-                referenceStr = `${ref.book}+${ref.chapter}:${ref.verse}`;
+                const res = await axios.get(
+                    `https://bible-api.com/${encodeURIComponent(ref.fullBook)}+${ref.chapter}:${ref.verse}`,
+                    { params: { translation: 'kjv' }, timeout: 8000, headers: { 'Accept': 'application/json' } }
+                );
+                if (res.data?.verses?.length) {
+                    verses = res.data.verses;
+                }
             }
 
-            const res = await axios.get(`https://bible-api.com/${encodeURIComponent(referenceStr)}`, {
-                params: { translation: 'kjv' },
-                timeout: 10000,
-                headers: { 'Accept': 'application/json' }
-            });
-
-            const data = res.data;
-
-            if (!data?.verses?.length) {
+            if (!verses.length) {
                 await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
-                return reply(`\`✘ Verse not found: ${ref.fullBook} ${ref.chapter}:${ref.verse}${ref.endVerse ? '-' + ref.endVerse : ''}\``);
+                return reply(`\`✘ Verse not found: ${ref.fullBook} ${ref.chapter}:${ref.verse}\``);
             }
 
-            let versesText = '';
-            for (const v of data.verses) {
-                versesText += `*${v.verse}* ${v.text.replace(/\n/g, ' ').trim()}\n\n`;
-            }
-            versesText = versesText.trim();
+            const verseChunks = splitVerses(verses);
+            const totalParts = verseChunks.length;
+            const refDisplay = ref.isRange 
+                ? `${ref.fullBook} ${ref.chapter}:${ref.verse}-${ref.endVerse}`
+                : `${ref.fullBook} ${ref.chapter}:${ref.verse}`;
 
-            const tableData = [
-                ['📖 Book', ref.fullBook],
-                ['📜 Chapter', ref.chapter],
-                ['📍 Verse' + (ref.endVerse ? 's' : ''), ref.endVerse ? `${ref.verse}-${ref.endVerse}` : ref.verse],
-                ['📝 Text', versesText]
-            ];
-
+            // Send first part with full info
             await sock.sendMessage(m.chat, {
-                headerText: `## 📖 ${data.reference || `${ref.fullBook} ${ref.chapter}:${ref.verse}${ref.endVerse ? '-' + ref.endVerse : ''}`}`,
+                headerText: `## 📖 ${refDisplay}${totalParts > 1 ? ' (1/' + totalParts + ')' : ''}`,
                 contentText: '---',
                 title: '🙏 Holy Bible (KJV)',
-                table: tableData,
-                footerText: '💡 SWIPE ⇆ • Use .bible <ref> for more verses'
+                table: [
+                    ['📖 Book', ref.fullBook],
+                    ['📜 Chapter', ref.chapter],
+                    ['📍 Verse(s)', ref.isRange ? `${ref.verse}-${ref.endVerse}` : String(ref.verse)],
+                    ['📝 Text', verseChunks[0]]
+                ],
+                footerText: totalParts > 1 ? `💡 SWIPE ⇆ for more (Part 1/${totalParts})` : '💡 SWIPE ⇆ • Use .bible <ref> for more'
             }, { quoted: m });
+
+            // Send remaining parts if any
+            for (let i = 1; i < verseChunks.length; i++) {
+                await sock.sendMessage(m.chat, {
+                    headerText: `## 📖 ${refDisplay} (${i + 1}/${totalParts})`,
+                    contentText: '---',
+                    title: '🙏 Holy Bible (KJV)',
+                    table: [
+                        ['📝 Text', verseChunks[i]]
+                    ],
+                    footerText: `💡 Part ${i + 1}/${totalParts}`
+                });
+            }
 
             await sock.sendMessage(m.chat, { react: { text: '🔖', key: m.key } });
 
         } catch (error) {
             console.error('[BIBLE ERROR]', error.message);
             await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
-            reply('`✘ Failed to fetch verse. Check reference and try again.`');
+            reply('`✘ Failed to fetch verse. Try again.`');
         }
     }
 };
