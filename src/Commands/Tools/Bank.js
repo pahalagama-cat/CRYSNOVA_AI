@@ -1,14 +1,10 @@
 module.exports = {
     name: 'bank',
-    alias: ['aza','account','sendaza','setbank','setaza'],
-    category: 'tools',
-    desc: 'View or set bank account details (Aza)',
-     // ⭐ Reaction config
-    reactions: {
-        start: '💱',
-        success: '🌟'
-    },
-    
+    alias: ['aza', 'account', 'sendaza', 'setbank', 'setaza'],
+    category: 'Tools',
+    desc: 'View or set bank account details',
+    usage: '.bank | .setbank <bank> <number> <name> [phone] [note]',
+    reactions: { start: '💱', success: '🌟', error: '❌' },
 
     execute: async (sock, m, { args, reply, prefix }) => {
 
@@ -20,77 +16,83 @@ module.exports = {
                 phone: '',
                 note: '',
                 setBy: ''
-            }
+            };
         }
 
-        const command = m.text.split(' ')[0].toLowerCase().replace(prefix,'')
-        const isSet = ['setbank','setaza'].includes(command)
+        const command = m.text.split(' ')[0].toLowerCase().replace(prefix, '');
+        const isSet = ['setbank', 'setaza'].includes(command);
 
+        // ── SET BANK ─────────────────────────────────────────────
         if (isSet) {
-
             if (args.length < 3) {
                 return reply(
-`╭─❍ *AZA SETUP*
-│ ⚉ Usage:
-│ ${prefix}${command} Bank AccNumber AccName [Phone] [Note]
-│
-│ ✦ Example:
-│ ${prefix}${command} Opay 8123456789 John Doe 08012345678 Donation
-╰─`
-                )
+                    `╭─❍ *AZA SETUP*\n│\n` +
+                    `│ ⚉ *Usage:*\n` +
+                    `│ ${prefix}${command} Bank Number Name [Phone] [Note]\n│\n` +
+                    `│ ✪ *Example:*\n` +
+                    `│ ${prefix}${command} Opay 8123456789 John 080 Donation\n` +
+                    `╰──────────────────`
+                );
             }
 
-            global.bankDetails.bankName = args[0]
-            global.bankDetails.accNumber = args[1]
+            global.bankDetails.bankName = args[0];
+            global.bankDetails.accNumber = args[1];
 
-            const remaining = args.slice(2)
+            const remaining = args.slice(2);
+            global.bankDetails.accName = remaining.slice(0, remaining.length - (remaining.length > 2 ? 2 : 0)).join(' ');
+            global.bankDetails.phone = remaining.length > 2 ? remaining[remaining.length - 2] : '';
+            global.bankDetails.note = remaining.length > 2 ? remaining[remaining.length - 1] : '';
+            global.bankDetails.setBy = m.sender.split('@')[0];
 
-            global.bankDetails.accName =
-                remaining.slice(0, remaining.length - (remaining.length > 2 ? 2 : 0)).join(' ')
+            await sock.sendMessage(m.chat, { react: { text: '💱', key: m.key } });
 
-            global.bankDetails.phone =
-                remaining.length > 2 ? remaining[remaining.length - 2] : ''
+            const tableData = [
+                ['🏦 Bank', global.bankDetails.bankName],
+                ['💳 Number', global.bankDetails.accNumber],
+                ['👤 Name', global.bankDetails.accName]
+            ];
 
-            global.bankDetails.note =
-                remaining.length > 2 ? remaining[remaining.length - 1] : ''
+            if (global.bankDetails.phone) tableData.push(['☏ Phone', global.bankDetails.phone]);
+            if (global.bankDetails.note) tableData.push(['✦ Note', global.bankDetails.note]);
+            tableData.push(['⚉ Set By', global.bankDetails.setBy]);
 
-            global.bankDetails.setBy = m.sender.split('@')[0]
+            await sock.sendMessage(m.chat, {
+                headerText: `## 💱 AZA Updated`,
+                contentText: '---',
+                title: '🏦 Bank Details',
+                table: tableData,
+                footerText: '💡 Use .bank to view • .setbank to update'
+            }, { quoted: m });
 
-            return reply(
-`╭─❍ *AZA UPDATED*
-│ ☬ Set by: ${m.sender.split('@')[0]}
-│
-│ 🏦 Bank: ${global.bankDetails.bankName}
-│ 💳 Number: ${global.bankDetails.accNumber}
-│ 👤 Name: ${global.bankDetails.accName}
-${global.bankDetails.phone ? `│ ☏ Phone: ${global.bankDetails.phone}` : ''}
-${global.bankDetails.note ? `│ ✦ Note: ${global.bankDetails.note}` : ''}
-╰─`
-            )
+            await sock.sendMessage(m.chat, { react: { text: '🌟', key: m.key } });
+            return;
         }
 
+        // ── VIEW BANK ────────────────────────────────────────────
         if (!global.bankDetails.accNumber) {
-            return reply(`⚉ No AZA set yet\nUse ${prefix}setbank to add one`)
+            return reply(`⚉ No AZA set yet\nUse ${prefix}setbank to add one`);
         }
 
-        let msg =
-`╭─❍ *AZA / BANK DETAILS*
-│ 🏦 Bank: ${global.bankDetails.bankName}
-│ 💳 Account: ${global.bankDetails.accNumber}
-│ 👤 Name: ${global.bankDetails.accName}
-`
+        await sock.sendMessage(m.chat, { react: { text: '💱', key: m.key } });
 
-        if (global.bankDetails.phone)
-            msg += `│ ☏ Phone: ${global.bankDetails.phone}\n`
+        const tableData = [
+            ['🏦 Bank', global.bankDetails.bankName],
+            ['💳 Account', global.bankDetails.accNumber],
+            ['👤 Name', global.bankDetails.accName]
+        ];
 
-        if (global.bankDetails.note)
-            msg += `│ ✦ Note: ${global.bankDetails.note}\n`
+        if (global.bankDetails.phone) tableData.push(['☏ Phone', global.bankDetails.phone]);
+        if (global.bankDetails.note) tableData.push(['✦ Note', global.bankDetails.note]);
+        if (global.bankDetails.setBy) tableData.push(['⚉ Set By', global.bankDetails.setBy]);
 
-        if (global.bankDetails.setBy)
-            msg += `│ ⚉ Last set by: ${global.bankDetails.setBy}\n`
+        await sock.sendMessage(m.chat, {
+            headerText: `## 💱 AZA / Bank Details`,
+            contentText: '---',
+            title: '🏦 Account Info',
+            table: tableData,
+            footerText: '💡 Copy & share easily • Use .setbank to update'
+        }, { quoted: m });
 
-        msg += `╰─ 𓄄 Copy & send easily`
-
-        reply(msg)
+        await sock.sendMessage(m.chat, { react: { text: '🌟', key: m.key } });
     }
-}
+};
