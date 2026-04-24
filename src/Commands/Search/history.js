@@ -3,15 +3,18 @@ const axios = require('axios');
 module.exports = {
     name: 'history',
     alias: ['today', 'onthisday', 'hist'],
-    category: 'tools',
-    desc: 'Get historical events for a specific date (MM/DD)',
-    execute: async (conn, m, { args, reply }) => {
+    desc: 'Get historical events for any date',
+    category: 'Search',
+    usage: '.history [MM/DD] or just .history for today',
+    reactions: { start: '📜', success: '📅', error: '❔' },
+
+    execute: async (sock, m, { args, reply, prefix }) => {
         try {
             let month, day;
 
             if (args[0] && args[0].includes('/')) {
                 const splitDate = args[0].split('/');
-                month = splitDate[0].padStart(2, '0'); // Ensures '1' becomes '01'
+                month = splitDate[0].padStart(2, '0');
                 day = splitDate[1].padStart(2, '0');
             } else {
                 const today = new Date();
@@ -19,46 +22,59 @@ module.exports = {
                 day = String(today.getDate()).padStart(2, '0');
             }
 
-            // Validation
             if (parseInt(month) > 12 || parseInt(day) > 31) {
-                return reply('✘ _*Format Error: Use MM/DD (Max 12/31)*_');
+                return reply('`✘ Format Error: Use MM/DD (Max 12/31)`');
             }
 
-            reply(` _*✦ RETRIEVING INFO${month}/${day}...*_`);
+            await sock.sendMessage(m.chat, { react: { text: '📜', key: m.key } });
+            await reply(`\`📜 Fetching history: ${month}/${day}...\``);
 
-            // Added Headers to prevent "Access Denied"
             const response = await axios.get(
                 `https://en.wikipedia.org/api/rest_v1/feed/onthisday/events/${month}/${day}`,
                 {
                     headers: {
-                        'User-Agent': 'CodexBot/2.0 (https://github.com/DEV-CODEXAI; codex@example.com) Axios/1.6.0'
-                    }
+                        'User-Agent': 'CRYSNOVA-Bot/2.0 (https://github.com/crysnovax; crysnova@example.com) Axios/1.6.0'
+                    },
+                    timeout: 10000
                 }
             );
-            
-            if (!response.data || !response.data.events || response.data.events.length === 0) {
-                return reply('✘ _*Codex Archive Error: No data found for this sector.*_');
+
+            if (!response.data?.events?.length) {
+                await sock.sendMessage(m.chat, { react: { text: '💤', key: m.key } });
+                return reply('`✘ No historical events found for this date`');
             }
 
             const events = response.data.events;
-            const selected = events.sort(() => 0.5 - Math.random()).slice(0, 3);
+            const selected = events.sort(() => 0.5 - Math.random()).slice(0, 5);
 
-            let resultMsg = ` _*✦ HISTORICAL INTEL*_\n`;
-            resultMsg += `📅 *Target Date:* ${month}/${day}\n\n`;
+            // Get month name
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                              'July', 'August', 'September', 'October', 'November', 'December'];
+            const monthName = monthNames[parseInt(month) - 1];
 
-            selected.forEach((ev, index) => {
-                resultMsg += `${index + 1}. *Year ${ev.year}:* ${ev.text}\n\n`;
-            });
+            const tableData = [['📅 Year', '📜 Event']];
+            
+            for (const ev of selected) {
+                const shortText = ev.text.length > 80 ? ev.text.slice(0, 77) + '...' : ev.text;
+                tableData.push([ev.year, shortText]);
+            }
 
-            resultMsg += `*RETRIEVED VIA CRYSNOVA AI*`;
+            await sock.sendMessage(m.chat, {
+                headerText: `## 📜 On This Day`,
+                contentText: '---',
+                title: `📅 ${monthName} ${parseInt(day)}`,
+                table: tableData,
+                footerText: `💡 SWIPE ⇆ • Source: Wikipedia | Try ${prefix}history 12/25`
+            }, { quoted: m });
 
-            reply(resultMsg);
+            await sock.sendMessage(m.chat, { react: { text: '🔖', key: m.key } });
 
         } catch (error) {
-            console.error(error);
-            // Detailed error feedback
-            const reason = error.response ? `Status ${error.response.status}` : "Network Timeout";
-            reply(`✘ _*History Core Error: ${reason}*_`);
+            console.error('[HISTORY ERROR]', error.message);
+            await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
+            
+            const reason = error.response ? `Status ${error.response.status}` : 'Network Error';
+            reply(`\`✘ ${reason}\``);
         }
     }
 };
