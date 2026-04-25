@@ -21,6 +21,7 @@ const PROTECTED_PATHS = [
     'sessions/',
     'node_modules',
     'node_modules/',
+    'src/database/',
     '.git',
     '.git/',
     '.update_check',
