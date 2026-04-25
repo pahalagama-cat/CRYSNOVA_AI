@@ -1,9 +1,9 @@
 const axios = require('axios')
 
 module.exports = {
-    name: 'ss',
-    alias: ['ssp','sstab','ssfull','ssmobile','ssweb'],
-    category: 'utils',
+    name: 'wss',
+    alias: ['wssp','wsstab','wssfull','wssmobile','wssweb'],
+    category: 'Tools',
     desc: 'Capture website screenshot',
 
     execute: async (sock, m, { args, reply }) => {
@@ -29,10 +29,10 @@ module.exports = {
 
             let device = "desktop"
 
-            if (cmd === "ssp" || cmd === "ssmobile") device = "phone"
-            if (cmd === "sstab") device = "tablet"
-            if (cmd === "ssfull") device = "full"
-            if (cmd === "ss") device = "desktop"
+            if (cmd === "wssp" || cmd === "wssmobile") device = "phone"
+            if (cmd === "wsstab") device = "tablet"
+            if (cmd === "wssfull") device = "full"
+            if (cmd === "wss") device = "desktop"
 
             const api = `https://api-rebix.zone.id/api/ssweb?url=${encodeURIComponent(targetUrl)}&device=${device}`
 
