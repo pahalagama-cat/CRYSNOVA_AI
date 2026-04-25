@@ -4,7 +4,7 @@ module.exports = {
     desc: 'Display a premium monthly calendar',
     category: 'Tools',
     usage: '.calendar [month] [year]',
-    reactions: { start: '📅', success: '✅', error: '❔' },
+    reactions: { start: '📅', success: '🔖', error: '❔' },
 
     execute: async (sock, m, { args, reply, prefix }) => {
         const today = new Date();
@@ -63,6 +63,6 @@ module.exports = {
             footerText: `💡 Today: ${today.getDate()} ${monthNames[currentMonth-1]} ${currentYear} | ${prefix}calendar ${month===12?1:month+1} ${month===12?year+1:year}`
         }, { quoted: m });
 
-        await sock.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+        await sock.sendMessage(m.chat, { react: { text: '✨', key: m.key } });
     }
 };
