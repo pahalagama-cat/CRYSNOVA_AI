@@ -3,10 +3,10 @@ const axios = require('axios');
 module.exports = {
     name: 'ttld',
     alias: [],
-    desc: 'Download TikTok videos without watermark',
+    desc: 'Download TikTok videos without watermark no audio sent',
     category: 'Downloader',
     usage: '.ttld <TikTok URL>',
-    reactions: { start: '🎵', success: '✅', error: '❔' },
+    reactions: { start: '🎵', success: '✨', error: '❔' },
 
     execute: async (sock, m, { args, reply, prefix, quoted }) => {
         let url = args[0]?.trim();
@@ -68,7 +68,7 @@ module.exports = {
 
             if (data.code !== 0 || !data.data) {
                 await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
-                await sock.sendMessage(m.chat, { text: '❌ Failed to fetch TikTok video', edit: progressMsg.key });
+                await sock.sendMessage(m.chat, { text: '💤 Failed to fetch TikTok video', edit: progressMsg.key });
                 return;
             }
 
@@ -81,7 +81,7 @@ module.exports = {
 
             if (!downloadUrl) {
                 await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
-                await sock.sendMessage(m.chat, { text: '❌ No video URL found', edit: progressMsg.key });
+                await sock.sendMessage(m.chat, { text: '🏗️No video URL found', edit: progressMsg.key });
                 return;
             }
 
@@ -143,13 +143,13 @@ module.exports = {
                             caption: `🎵 *${title}*\n👤 ${author}\n\n_⚡ CRYSNOVA_`
                         }, );
 
-                        await sock.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+                        await sock.sendMessage(m.chat, { react: { text: '✨', key: m.key } });
                         return;
                     }
                 }
                 
                 await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
-                await sock.sendMessage(m.chat, { text: '❌ Downloaded file is not a video. Try another link.', edit: progressMsg.key });
+                await sock.sendMessage(m.chat, { text: '🏗️ Downloaded file is not a video. Try another link.', edit: progressMsg.key });
                 return;
             }
 
@@ -165,15 +165,15 @@ module.exports = {
                 caption: `🎵 *${title}*\n👤 ${author}\n\n_⚡ CRYSNOVA_`
             }, { quoted: m });
 
-            await sock.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
+            await sock.sendMessage(m.chat, { react: { text: '✨', key: m.key } });
 
         } catch (err) {
             console.error('[TTLD ERROR]', err.message);
             await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
 
-            let errorMsg = '❌ *Failed*\n\n';
+            let errorMsg = '🏗️ *Failed*\n\n';
             if (err.code === 'ECONNABORTED') errorMsg += '⏰ Timeout\n';
-            else errorMsg += `⚠️ ${err.message}`;
+            else errorMsg += `🏗️ ${err.message}`;
 
             await sock.sendMessage(m.chat, { text: errorMsg, edit: progressMsg.key });
         }
