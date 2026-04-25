@@ -6,6 +6,17 @@ const BACKUP_API = 'https://bak.crysnovax.link';
 const backupSession = new Map();
 const restoreSession = new Map();
 
+// Helper: Send premium table
+async function sendTable(sock, chat, header, title, rows, footer) {
+    await sock.sendMessage(chat, {
+        headerText: header,
+        contentText: '---',
+        title: title,
+        table: rows,
+        footerText: footer
+    });
+}
+
 // ==================== BACKUP ====================
 const backupCmd = {
     name: 'backup',
@@ -14,7 +25,7 @@ const backupCmd = {
     category: 'Owner',
     ownerOnly: true,
     usage: '.backup start | number= | code= | push',
-    reactions: { start: '💾', success: '🥀', error: '❔' },
+    reactions: { start: '💾', success: '✅', error: '❔' },
 
     execute: async (sock, m, { args, reply, prefix }) => {
         const userId = m.sender;
@@ -28,18 +39,22 @@ const backupCmd = {
         // START
         if (fullText === 'start' || fullText === '') {
             backupSession.set(userId, { phone: '', password: '' });
-            return reply(
-                `💾 *CLOUD BACKUP*\n\n` +
-                `📱 Step 1: ${prefix}backup number=2348077528901\n` +
-                `🔐 Step 2: ${prefix}backup code=password\n` +
-                `🚀 Step 3: ${prefix}backup push`
+            return sendTable(sock, m.chat,
+                `## 💾 Cloud Backup`,
+                '📋 Step-by-Step',
+                [
+                    ['📱 Step 1', `${prefix}backup number=2348077528901`],
+                    ['🔐 Step 2', `${prefix}backup code=<password>`],
+                    ['🚀 Step 3', `${prefix}backup push`]
+                ],
+                '💡 Your data is encrypted before upload'
             );
         }
 
         // NUMBER
         if (fullText.startsWith('number=')) {
             const phone = fullText.split('=')[1].replace(/[^0-9]/g, '');
-            if (phone.length < 7) return reply('`✘ Invalid phone`');
+            if (phone.length < 7) return reply('`✘ Invalid phone number`');
             
             try {
                 const res = await axios.post(`${BACKUP_API}/backup/exists`, { phone });
@@ -48,33 +63,54 @@ const backupCmd = {
                 
                 if (res.data.exists) {
                     const date = new Date(res.data.timestamp).toLocaleString();
-                    return reply(
-                        `📱 ${phone}\n\n` +
-                        `⚠️ *Existing backup found!*\n` +
-                        `📅 ${date}\n\n` +
-                        `🔐 ${prefix}backup code=password\n` +
-                        `_(Will overwrite existing backup)_`
+                    return sendTable(sock, m.chat,
+                        `## ⚠️ Existing Backup Found`,
+                        '📱 Phone Registered',
+                        [
+                            ['📱 Phone', phone],
+                            ['📅 Created', date],
+                            ['📏 Size', res.data.sizeFormatted || 'N/A'],
+                            ['🔐 Next', `${prefix}backup code=<password>`]
+                        ],
+                        '⚠️ This will overwrite the existing backup'
                     );
                 }
-                return reply(`📱 ${phone} ✅\n🔐 ${prefix}backup code=password`);
+                return sendTable(sock, m.chat,
+                    `## 📱 Phone Set`,
+                    '✅ Ready',
+                    [
+                        ['📱 Phone', phone],
+                        ['🔐 Next', `${prefix}backup code=<password>`]
+                    ],
+                    '💡 Set a password to encrypt your backup'
+                );
             } catch (err) {
-                return reply(`❌ API Error: ${err.message}`);
+                return reply(`\`❌ ${err.message}\``);
             }
         }
 
         // CODE
         if (fullText.startsWith('code=')) {
             const password = fullText.split('=').slice(1).join('=');
-            if (password.length < 3) return reply('`✘ Min 3 characters`');
+            if (password.length < 3) return reply('`✘ Password must be at least 3 characters`');
             session.password = password;
             backupSession.set(userId, session);
-            return reply(`🔐 Password set!\n🚀 ${prefix}backup push`);
+            return sendTable(sock, m.chat,
+                `## 🔐 Password Set`,
+                '✅ Ready to Upload',
+                [
+                    ['📱 Phone', session.phone],
+                    ['🔐 Password', '••••••••'],
+                    ['🚀 Next', `${prefix}backup push`]
+                ],
+                '💡 Your data will be encrypted with this password'
+            );
         }
 
         // PUSH
         if (fullText === 'push') {
-            if (!session.phone) return reply('`✘ .backup number=234xxx first`');
-            if (!session.password) return reply('`✘ .backup code=password first`');
+            if (!session.phone) return reply('`✘ Set phone first: .backup number=234xxx`');
+            if (!session.password) return reply('`✘ Set password first: .backup code=<password>`');
 
             await sock.sendMessage(m.chat, { react: { text: '💾', key: m.key } });
 
@@ -123,28 +159,47 @@ const backupCmd = {
 
                 await updateProgress(100, 'Done!');
 
-                const summary = 
-                    `✅ *BACKUP SAVED!*\n\n` +
-                    `📱 Phone: ${session.phone}\n` +
-                    `📂 Database files: ${Object.keys(dbFiles).length}\n` +
-                    `📝 .env: ${envContent ? '✅ Backed up' : '❌ Not found'}\n` +
-                    `📏 Size: ${saveRes.data.sizeFormatted || (saveRes.data.size / 1024).toFixed(1) + ' KB'}\n\n` +
-                    `💡 Use *.restore* on any new deployment!`;
+                await sock.sendMessage(m.chat, { delete: progressMsg.key });
 
-                await sock.sendMessage(m.chat, { text: summary, edit: progressMsg.key });
+                await sendTable(sock, m.chat,
+                    `## ✅ Backup Saved!`,
+                    '💾 Cloud Storage',
+                    [
+                        ['📱 Phone', session.phone],
+                        ['📂 Database Files', Object.keys(dbFiles).length],
+                        ['📝 .env File', envContent ? '✅ Backed up' : '❌ Not found'],
+                        ['📏 Size', saveRes.data.sizeFormatted || (saveRes.data.size / 1024).toFixed(1) + ' KB'],
+                        ['🔐 Status', 'Encrypted & Secure']
+                    ],
+                    '💡 Use .restore on any new deployment to recover!'
+                );
+
                 await sock.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
 
             } catch (err) {
                 console.error('[BACKUP]', err.message);
                 await sock.sendMessage(m.chat, { react: { text: '❔', key: m.key } });
-                await sock.sendMessage(m.chat, { text: `❌ *Failed*\n\n${err.response?.data?.error || err.message}`, edit: progressMsg.key });
+                await sock.sendMessage(m.chat, {
+                    text: `❌ *Failed*\n\n${err.response?.data?.error || err.message}`,
+                    edit: progressMsg.key
+                });
             }
 
             backupSession.delete(userId);
             return;
         }
 
-        return reply(`${prefix}backup start\n${prefix}backup number=234xxx\n${prefix}backup code=pass\n${prefix}backup push`);
+        return sendTable(sock, m.chat,
+            `## 💾 Backup Commands`,
+            '📋 Usage',
+            [
+                ['Start', `${prefix}backup start`],
+                ['Set Number', `${prefix}backup number=234xxx`],
+                ['Set Password', `${prefix}backup code=pass`],
+                ['Upload', `${prefix}backup push`]
+            ],
+            '💡 Follow the steps in order'
+        );
     }
 };
 
@@ -170,11 +225,15 @@ const restoreCmd = {
         // START
         if (fullText === 'start' || fullText === '') {
             restoreSession.set(userId, { phone: '', password: '' });
-            return reply(
-                `📥 *CLOUD RESTORE*\n\n` +
-                `📱 Step 1: ${prefix}restore number=2348077528901\n` +
-                `🔐 Step 2: ${prefix}restore code=password\n` +
-                `🚀 Step 3: ${prefix}restore push`
+            return sendTable(sock, m.chat,
+                `## 📥 Cloud Restore`,
+                '📋 Step-by-Step',
+                [
+                    ['📱 Step 1', `${prefix}restore number=2348077528901`],
+                    ['🔐 Step 2', `${prefix}restore code=<password>`],
+                    ['🚀 Step 3', `${prefix}restore push`]
+                ],
+                '💡 Restore your data to any new deployment'
             );
         }
 
@@ -188,22 +247,34 @@ const restoreCmd = {
                 
                 if (!res.data.exists) {
                     restoreSession.delete(userId);
-                    return reply(`❌ *No backup found for ${phone}*`);
+                    return sendTable(sock, m.chat,
+                        `## ❌ Not Found`,
+                        '🔍 Search Result',
+                        [
+                            ['📱 Phone', phone],
+                            ['📊 Status', 'No backup found']
+                        ],
+                        '💡 Use .backup to create one first'
+                    );
                 }
 
                 session.phone = phone;
                 const date = new Date(res.data.timestamp).toLocaleString();
                 restoreSession.set(userId, session);
                 
-                return reply(
-                    `✅ *Backup found!*\n\n` +
-                    `📱 Phone: ${phone}\n` +
-                    `📅 Date: ${date}\n` +
-                    `📏 Size: ${res.data.sizeFormatted || 'N/A'}\n\n` +
-                    `🔐 ${prefix}restore code=password`
+                return sendTable(sock, m.chat,
+                    `## ✅ Backup Found`,
+                    '📱 Phone Verified',
+                    [
+                        ['📱 Phone', phone],
+                        ['📅 Date', date],
+                        ['📏 Size', res.data.sizeFormatted || 'N/A'],
+                        ['🔐 Next', `${prefix}restore code=<password>`]
+                    ],
+                    '💡 Enter your backup password to continue'
                 );
             } catch (err) {
-                return reply(`❌ API Error: ${err.message}`);
+                return reply(`\`❌ ${err.message}\``);
             }
         }
 
@@ -213,11 +284,16 @@ const restoreCmd = {
             if (!password) return reply('`✘ Enter password`');
             session.password = password;
             restoreSession.set(userId, session);
-            return reply(
-                `🔐 Password set!\n\n` +
-                `📱 *${session.phone}*\n\n` +
-                `🚀 ${prefix}restore push\n\n` +
-                `⚠️ *This will overwrite your current files!*`
+            return sendTable(sock, m.chat,
+                `## 🔐 Password Set`,
+                '⚠️ Ready to Restore',
+                [
+                    ['📱 Phone', session.phone],
+                    ['🔐 Password', '••••••••'],
+                    ['🚀 Next', `${prefix}restore push`],
+                    ['⚠️ Warning', 'This overwrites current files!']
+                ],
+                '💡 Make sure you want to replace all current data'
             );
         }
 
@@ -276,14 +352,20 @@ const restoreCmd = {
 
                 await updateProgress(100, 'Done! Restarting...');
 
-                const summary = 
-                    `✅ *RESTORE COMPLETE!*\n\n` +
-                    `📱 Phone: ${session.phone}\n` +
-                    `📂 Database files: ${dbCount}\n` +
-                    `📝 .env: ${backupData.env ? '✅ Restored' : '⚠️ Not in backup'}\n\n` +
-                    `🔄 *Rebooting bot in 3 seconds...*`;
+                await sock.sendMessage(m.chat, { delete: progressMsg.key });
 
-                await sock.sendMessage(m.chat, { text: summary, edit: progressMsg.key });
+                await sendTable(sock, m.chat,
+                    `## ✅ Restore Complete!`,
+                    '📥 Data Recovered',
+                    [
+                        ['📱 Phone', session.phone],
+                        ['📂 Database Files', dbCount],
+                        ['📝 .env File', backupData.env ? '✅ Restored' : '⚠️ Not in backup'],
+                        ['🔄 Action', 'Rebooting bot...']
+                    ],
+                    '💡 Bot will restart in 3 seconds'
+                );
+
                 await sock.sendMessage(m.chat, { react: { text: '✅', key: m.key } });
 
                 setTimeout(() => process.exit(0), 3000);
@@ -300,7 +382,17 @@ const restoreCmd = {
             return;
         }
 
-        return reply(`${prefix}restore start\n${prefix}restore number=234xxx\n${prefix}restore code=pass\n${prefix}restore push`);
+        return sendTable(sock, m.chat,
+            `## 📥 Restore Commands`,
+            '📋 Usage',
+            [
+                ['Start', `${prefix}restore start`],
+                ['Set Number', `${prefix}restore number=234xxx`],
+                ['Set Password', `${prefix}restore code=pass`],
+                ['Download', `${prefix}restore push`]
+            ],
+            '💡 Follow the steps in order'
+        );
     }
 };
 
