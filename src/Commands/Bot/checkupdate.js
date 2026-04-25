@@ -144,12 +144,12 @@ async function newUpdate(sock, m, { reply }) {
         let response = '';
 
         if (newFiles.length === 0 && changedFiles.length === 0 && deletedFiles.length === 0) {
-            response = '✅ *Your panel is up to date!*\n\n_No changes detected in the repository._';
+            response = '`⟁⃝⎔UP YO DATE!℘`';
         } else {
             response = `📢 *Update Available!*\n\n`;
             
             if (newFiles.length > 0) {
-                response += `🆕 *New Files (${newFiles.length}):*\n`;
+                response += `ⓘ *New Files (${newFiles.length}):*\n`;
                 for (const f of newFiles.slice(0, 15)) {
                     response += `  • ${f}\n`;
                 }
@@ -158,7 +158,7 @@ async function newUpdate(sock, m, { reply }) {
             }
 
             if (changedFiles.length > 0) {
-                response += `📝 *Changed Files (${changedFiles.length}):*\n`;
+                response += `✐ *Changed Files (${changedFiles.length}):*\n`;
                 for (const f of changedFiles.slice(0, 15)) {
                     response += `  • ${f}\n`;
                 }
@@ -167,7 +167,7 @@ async function newUpdate(sock, m, { reply }) {
             }
 
             if (deletedFiles.length > 0) {
-                response += `🗑️ *Removed in Update (${deletedFiles.length}):*\n`;
+                response += `彡 *Removed in Update (${deletedFiles.length}):*\n`;
                 for (const f of deletedFiles.slice(0, 10)) {
                     response += `  • ${f}\n`;
                 }
