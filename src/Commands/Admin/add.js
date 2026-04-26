@@ -14,6 +14,7 @@ module.exports = {
                 return reply('_*📞 Provide a phone number*_\n_Example: .add 0807 752 8901_');
             }
 
+            // ✅ FORMAT NUMBER
             let number = args.join(' ').replace(/[^0-9]/g, '');
             if (number.startsWith('0')) number = '234' + number.slice(1);
             if (!number.startsWith('234')) number = '234' + number;
@@ -22,6 +23,7 @@ module.exports = {
             const meta = await sock.groupMetadata(m.chat);
             const groupName = meta.subject;
 
+            // ✅ TRY DIRECT ADD
             let res = await sock.groupParticipantsUpdate(m.chat, [jid], 'add');
             const status = res?.[0]?.status;
 
@@ -32,55 +34,39 @@ module.exports = {
                 }, { quoted: m });
             }
 
+            // ❌ PRIVACY BLOCK → SEND INVITE WITH ?mode=gi_t
             if (['403', '401', '409'].includes(String(status))) {
                 const freshCode = await sock.groupInviteCode(m.chat);
-                const inviteLinkWithParam = `https://chat.whatsapp.com/${freshCode}?mode=gi_t`;
+                const inviteLink = `https://chat.whatsapp.com/${freshCode}?mode=gi_t`;
 
+                // Thumbnail
                 let thumbnail = null;
                 try {
                     const pp = await sock.profilePictureUrl(m.chat, 'image');
                     thumbnail = await fetch(pp).then(r => r.buffer());
                 } catch {}
 
-                // ✅ FORCE ?mode=gi_t using RAW proto (no Baileys processing)
-                try {
-                    console.log('Sending RAW invite with ?mode=gi_t:', inviteLinkWithParam);
+                // ✅ RAW PROTO — forces ?mode=gi_t to persist
+                await sock.sendMessage(jid, {
+                    extendedTextMessage: {
+                        text: inviteLink,
+                        matchedText: inviteLink,
+                        canonicalUrl: inviteLink,
+                        title: groupName,
+                        description: 'WhatsApp Group Invite',
+                        previewType: 1,
+                        jpegThumbnail: thumbnail
+                    },
+                    raw: true
+                });
 
-                    await sock.sendMessage(jid, {
-                        extendedTextMessage: {
-                            text: inviteLinkWithParam,
-                            matchedText: inviteLinkWithParam,      // ← Force full URL with param
-                            canonicalUrl: inviteLinkWithParam,       // ← Force full URL with param
-                            title: groupName,
-                            description: 'WhatsApp Group Invite',
-                            previewType: 1, // LINK preview
-                            jpegThumbnail: thumbnail,
-                            // No contextInfo tricks — let WhatsApp handle it natively
-                        },
-                        raw: true  // ← BYPASSES all Baileys URL normalization!
-                    });
-
-                    return await sock.sendMessage(m.chat, {
-                        text: `_*📩 RAW ?mode=gi_t invite sent to @${number}—͟͟͞͞𖣘*_`,
-                        mentions: [jid]
-                    }, { quoted: m });
-
-                } catch (err) {
-                    console.log('RAW FAILED:', err);
-
-                    // Fallback: standard send
-                    await sock.sendMessage(jid, {
-                        text: inviteLinkWithParam,
-                        linkPreview: true
-                    });
-
-                    return await sock.sendMessage(m.chat, {
-                        text: `_*📩 Fallback invite sent to @${number}—͟͟͞͞𖣘*_`,
-                        mentions: [jid]
-                    }, { quoted: m });
-                }
+                return await sock.sendMessage(m.chat, {
+                    text: `_*📩 Invite sent to @${number}—͟͟͞͞𖣘*_`,
+                    mentions: [jid]
+                }, { quoted: m });
             }
 
+            // ❌ OTHER ERROR
             return await sock.sendMessage(m.chat, {
                 text: `_*✘ Failed to add @${number} (status: ${status})*_`,
                 mentions: [jid]
