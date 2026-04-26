@@ -1,63 +1,86 @@
+const fetch = require('node-fetch');
+
 module.exports = {
     name: 'ginfo',
-    alias: ['groupinfo','gi'],
-    desc: 'Get the group full details group name link and discrimination',
+    alias: ['groupinfo', 'gi'],
+    desc: 'Get the group full details — name, link, and description',
     category: 'Admin',
     usage: '_⎔ .ginfo_',
+    admin: false,  // Anyone can use, but bot needs admin to get link
+    group: true,
 
     execute: async (sock, m, { reply }) => {
         if (!m.isGroup) {
-            return reply('`⟁⃝GROUP ONLY!℘`');
+            return reply('`⟁⃝ GROUP ONLY! ℘`');
         }
 
         try {
-            // Try to get the current invite code
-            const code = await sock.groupInviteCode(m.chat);
-
-            if (!code) {
-                return reply('_✘ try again later_');
-            }
-
-            const link = `https://chat.whatsapp.com/${code}`;
-
-            // Optional: fetch metadata for better message (group name + desc)
+            // Fetch group metadata
             let metadata;
             try {
                 metadata = await sock.groupMetadata(m.chat);
             } catch (e) {
-                // metadata fetch can fail sometimes → continue anyway
-                console.error('[LINKGC METADATA]', e?.message || e);
+                console.error('[GINFO METADATA]', e?.message || e);
+                return reply('`𓉤 Failed to fetch group info`');
             }
 
-            const groupName = metadata?.subject || 'This Group';
-            const desc = metadata?.desc || 'No description set';
+            const groupName = metadata?.subject || 'Unknown Group';
+            const desc = metadata?.desc || '_No description set_';
+            const participants = metadata?.participants?.length || 0;
+            const owner = metadata?.owner?.split('@')[0] || 'Unknown';
 
-            // Build a nice formatted message
-            const text = `✪ *Group Invite Link*\n\n` +
-                         `Group: *${groupName}*\n` +
-                         `Description: ${desc}\n\n` +
-                         `→ ${link}\n\n` +
-                         `Tap the link to join directly (preview should show group info)`;
+            // Try to get invite code (bot needs admin)
+            let inviteLink = null;
+            let linkStatus = '_✘ Bot is not admin — cannot fetch invite link_';
 
-            await sock.sendMessage(m.chat, { text }, { quoted: m });
-
-            // Or if you prefer a shorter version with just the link (preview will still work):
-            // await sock.sendMessage(m.chat, { text: `Group link: ${link}` }, { quoted: m });
-
-        } catch (err) {
-            console.error('[LINKGC ERROR]', err?.message || err);
-
-            let msg = '_✘ Error!_\n\n';
-
-            if (err?.message?.includes('admin') || err?.message?.includes('permission') || err?.message?.includes('not-authorized')) {
-                msg += '_𓉤 Bot must be an admin to get the invite link_';
-            } else if (err?.message?.includes('revoked') || err?.message?.includes('invalid')) {
-                msg += '𓉤 Invite link is revoked or invalid — use .resetlink first';
-            } else {
-                msg += `𓉤 ${err?.message || 'Unknown error'}`;
+            try {
+                const code = await sock.groupInviteCode(m.chat);
+                if (code) {
+                    inviteLink = `https://chat.whatsapp.com/${code}?mode=gi_t`;
+                    linkStatus = null;
+                }
+            } catch (err) {
+                console.error('[GINFO INVITE]', err?.message || err);
             }
 
-            reply(msg);
+            // Thumbnail
+            let thumbnail = null;
+            try {
+                const pp = await sock.profilePictureUrl(m.chat, 'image');
+                thumbnail = await fetch(pp).then(r => r.buffer());
+            } catch {}
+
+            // Build info text
+            const infoText = `*⟁⃝  GROUP INFORMATION —͟͟͞͞𖣘*\n\n` +
+                           `*Name:* ${groupName}\n` +
+                           `*Members:* ${participants}\n` +
+                           `*Owner:* ${owner}\n` +
+                           `*Description:* ${desc}\n` +
+                           (linkStatus ? `\n${linkStatus}\n` : '');
+
+            // Send info text
+            await sock.sendMessage(m.chat, { text: infoText }, { quoted: m });
+
+            // Send invite link with rich preview if available
+            if (inviteLink) {
+                await sock.sendMessage(m.chat, {
+                    extendedTextMessage: {
+                        text: inviteLink,
+                        matchedText: inviteLink,
+                        canonicalUrl: inviteLink,
+                        title: groupName,
+                        description: 'WhatsApp Group Invite',
+                        previewType: 1,
+                        jpegThumbnail: thumbnail
+                    },
+                    raw: true
+                });
+            }
+
+        } catch (e) {
+            console.error('[GINFO ERROR]', e);
+            reply(`𓆉 Error: ${e.message}`);
         }
     }
 };
+        
