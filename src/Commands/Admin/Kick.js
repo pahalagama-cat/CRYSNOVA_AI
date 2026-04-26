@@ -26,7 +26,7 @@ module.exports = {
                 return reply('`ⓘ INVALID FORMAT!`');
             target = number + '@s.whatsapp.net';
         } else {
-            return reply('`𓋎 MENTION A USER!`\n_✪ .kick @user_');
+            return reply('`𓋎 MENTION A USER!`\n_☠︎︎ .kick @user_');
         }
 
         try {
@@ -53,7 +53,7 @@ module.exports = {
             if (err.message?.includes('admin') || err.message?.includes('permission')) {
                 msg += 'ಠ_ಠ _Bot lacks admin permission_';
             } else if (err.message?.includes('not-authorized')) {
-                msg += '𓃼 _Cannot remove this user_';
+                msg += '☠︎︎ _Cannot remove this user_';
             } else {
                 msg += `𓉤 <${err.message || 'Unknown error'}>`;
             }
