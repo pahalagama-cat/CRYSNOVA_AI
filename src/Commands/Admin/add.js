@@ -9,7 +9,7 @@ module.exports = {
 
     execute: async (sock, m, { args, reply }) => {
         try {
-            if (!m.isGroup) return reply('`—͟͟͞͞𖣘 GROUP ONLY`');
+            if (!m.isGroup) return reply('`⟁⃝GROUP ONLY!℘`');
             if (!args.length) {
                 return reply('_*📞 Provide a phone number*_\n_Example: .add 0807 752 8901_');
             }
