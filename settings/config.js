@@ -97,7 +97,7 @@ const config = {
         autoRead:      process.env.AUTO_READ      !== 'false',
         autoTyping:    process.env.AUTO_TYPING    === 'false',
         autoRecording: process.env.AUTO_RECORDING === 'true',
-        alwaysOnline:  process.env.ALWAYS_ONLINE  !== 'false',
+        alwaysOnline:  process.env.ALWAYS_ONLINE  !== 'true',
         selfBot:       process.env.SELF_BOT       === 'true'
     },
 
@@ -156,15 +156,15 @@ const config = {
     message: {
         owner:   '`ⓘ OWNER ONLY 彡`',
         group:   '`⟁⃝GROUP ONLY!℘`',
-        admin:   '⚠︎ _*ADMIN ONLY!*_ 𓃼',
+        admin:   '`⚠︎ ADMIN ONLY! 𓃼`',
         private: 'ಠ_ಠ_*USE THIS IN DM*_ 𓀀'
     },
 
     mess: {
-        owner: 'ಥ⁠‿⁠ಥ _*OWNER ONLY!*_',
-        done:  'Mode changed successfully! ✓𓄄',
-        error: 'Something went wrong! ✘𓄄',
-        wait:  'Please wait... ⚉'
+        owner: '`☠︎︎ OWNER ONLY!`',
+        done:  '`㋛ Mode changed!!`',
+        error: 'Something went wrong! ✘',
+        wait:  '_Please wait... ⚉_'
     },
 
     // ════════════════════════════════════════════
