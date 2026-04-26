@@ -54,7 +54,7 @@ Available Features:
                 db[m.chat].welcomeEnabled = true;
                 db[m.chat].goodbyeEnabled = true;
                 fs.writeFileSync(path, JSON.stringify(db, null, 2));
-                return await reply('_*✓ Group Events Enabled (Welcome + Goodbye)!*_');
+                return await reply('`⚇ All Events Enabled`');
             }
 
             if (option === 'off') {
@@ -62,7 +62,7 @@ Available Features:
                 db[m.chat].welcomeEnabled = false;
                 db[m.chat].goodbyeEnabled = false;
                 fs.writeFileSync(path, JSON.stringify(db, null, 2));
-                return await reply('_*✘ Group Events Disabled!*_');
+                return await reply('`⟁⃝✘ Group Events Disabled!`');
             }
 
             if (option === 'welcome') {
@@ -70,7 +70,7 @@ Available Features:
                 db[m.chat].welcomeEnabled = true;
                 db[m.chat].goodbyeEnabled = false;
                 fs.writeFileSync(path, JSON.stringify(db, null, 2));
-                return await reply('_*✓ Welcome Only Mode Enabled!*_');
+                return await reply('`Welcome Only Enabled!`');
             }
 
             if (option === 'goodbye') {
