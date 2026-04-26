@@ -1,52 +1,58 @@
+const fetch = require('node-fetch');
+
 module.exports = {
-    name: 'resetlink',
-    alias: ['relink', 'resetgroup'],
-    category: 'group',
-    desc: 'Reset WhatsApp group invite link with preview',
+    name: 'revoke',
+    alias: ['resetlink', 'newlink', 'revokelink'],
+    category: 'Admin',
+    admin: true,
+    group: true,
 
     execute: async (sock, m, { reply }) => {
-        if (!m.isGroup) return reply('✘ Only works in groups.');
-
         try {
-            // Reset the group invite link
-            await sock.groupRevokeInvite(m.chat);
+            if (!m.isGroup) return reply('`⟁⃝GROUP ONLY!℘`');
 
-            // Get the new invite code directly
-            const code = await sock.groupInviteCode(m.chat); // code is a string
-            const newLink = `https://chat.whatsapp.com/${code}`;
+            const meta = await sock.groupMetadata(m.chat);
+            const groupName = meta.subject;
 
-            // Get group metadata
-            const metadata = await sock.groupMetadata(m.chat);
-
-            // Get group icon URL
-            let iconUrl = null;
+            // ✅ REVOKE CURRENT INVITE CODE
+            let newCode;
             try {
-                iconUrl = await sock.profilePictureUrl(m.chat, 'image');
+                newCode = await sock.groupRevokeInvite(m.chat);
+            } catch (err) {
+                return reply('`—͟͟͞͞𖣘 Failed to revoke link. Make sure I am admin.`');
+            }
+
+            const newLink = `https://chat.whatsapp.com/${newCode}?mode=gi_t`;
+
+            // Thumbnail
+            let thumbnail = null;
+            try {
+                const pp = await sock.profilePictureUrl(m.chat, 'image');
+                thumbnail = await fetch(pp).then(r => r.buffer());
             } catch {}
 
-            // Send link with preview like .glink
-            await sock.sendMessage(
-                m.chat,
-                {
-                    text: `╭──────────────\n│ *GROUP LINK RESET*\n╰──────────────\n${newLink}`,
-                    contextInfo: {
-                        externalAdReply: {
-                            title: metadata.subject,
-                            body: "Tap to open group invite",
-                            sourceUrl: newLink,
-                            thumbnailUrl: iconUrl || undefined,
-                            mediaType: 1,
-                            renderLargerThumbnail: true,
-                            showAdAttribution: false
-                        }
-                    }
-                },
-                { quoted: m }
-            );
+            // Send revocation notice + new link with rich preview
+            await sock.sendMessage(m.chat, {
+                text: `_*⟁⃝  Group link has been revoked and renewed—͟͟͞͞𖣘*_`
+            }, { quoted: m });
 
-        } catch (err) {
-            console.error('[RESETLINK ERROR]', err);
-            reply('✘ Failed to reset link. Make sure I am admin!');
+            // Send new link with ?mode=gi_t rich preview
+            await sock.sendMessage(m.chat, {
+                extendedTextMessage: {
+                    text: newLink,
+                    matchedText: newLink,
+                    canonicalUrl: newLink,
+                    title: groupName,
+                    description: 'WhatsApp Group Invite — Link Renewed',
+                    previewType: 1,
+                    jpegThumbnail: thumbnail
+                },
+                raw: true
+            });
+
+        } catch (e) {
+            console.error('REVOKE ERROR:', e);
+            reply(`𓆉 Error: ${e.message}`);
         }
     }
 };
