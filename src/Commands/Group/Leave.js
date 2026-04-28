@@ -1,6 +1,6 @@
 module.exports = {
-    name: 'leave',
-    alias: ['exit', 'leavegc'],
+    name: 'exit',
+    alias: ['leavegc'],
     category: 'group',
     desc: 'Leave the current group',
     owner: true,
@@ -9,19 +9,11 @@ module.exports = {
 
         try {
 
-            await reply(`
-𓉤 CRYSNOVA AI
-
-_*✪ Leaving Group...*_
-`);
+            await reply('`×͜×⟁⃝GOOD BYE!℘`');
 
             await sock.groupLeave(m.chat);
 
-            await reply(`
-𓉤 CRYSNOVA AI
-
- _*Successfully Left ✔*_
-`);
+            
 
         } catch (err) {
 
