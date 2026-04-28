@@ -27,7 +27,7 @@
     "@whiskeysockets/baileys": "^7.0.0-rc.9",
     "@hapi/boom": "^10.0.1",
     "groq-sdk": "^1.1.2",
-    "mumaker": "^1.0.0",
+    "mumaker": "^2.0.0",
     "adm-zip": "^0.5.16",
     "archiver": "^7.0.1",
     "js-confuser": "^2.0.0",
