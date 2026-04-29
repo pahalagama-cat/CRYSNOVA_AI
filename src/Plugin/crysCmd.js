@@ -23,6 +23,26 @@ const addCommand = (cmd) => {
     }
 };
 
+/* Register external/dynamic command (public API for plugins) */
+const registerCommand = (cmd) => {
+    if (!cmd?.name) return false;
+
+    const name = cmd.name.toLowerCase();
+
+    // Allow overwriting for plugin updates
+    registry.set(name, cmd);
+
+    // Register aliases
+    if (Array.isArray(cmd.alias)) {
+        for (const a of cmd.alias) {
+            const alias = a.toLowerCase();
+            registry.set(alias, cmd);
+        }
+    }
+
+    return true;
+};
+
 /* Clear registry */
 const clearRegistry = () => registry.clear();
 
@@ -52,6 +72,7 @@ const getByCategory = () => {
 
 module.exports = {
     addCommand,
+    registerCommand,
     clearRegistry,
     getCommand,
     getAll,
