@@ -1,12 +1,12 @@
 const axios = require("axios");
-const config = require("../../../settings/config");
 
-// Use AI base from config (same as image APIs)
-const AI_BASE = process.env.AI_API_BASE || config.api?.imageBase || '';
+// Apex Gateway
+const AI_GATEWAY = 'https://appex.crysnovax.link';
+const AI_TOKEN = 'x';
 
 module.exports = {
     name: 'story',
-    alias: ['advai', 'smartgen', 'aipro'],
+    alias: [],
     category: 'AI',
     desc: 'Advanced storytelling AI powered by CRYSNOVA',
 
@@ -34,57 +34,30 @@ module.exports = {
             await sock.sendPresenceUpdate('composing', m.chat);
             await sock.sendMessage(m.chat, { react: { text: '📖', key: m.key } });
 
-            // ─── STORYTELLING TRAINING PROMPT ─────────────────────────────
-            const TRAINING_PROMPT = `You are a master storyteller and creative writer. Your task is to craft engaging, vivid, and well-structured stories based on the user's request. Use descriptive language, maintain a consistent tone, and create memorable characters and settings. Adapt the story length and style according to any specified requirements.
+            // Build prompt based on options
+            let lengthInstruction;
+            if (length === 'short') lengthInstruction = 'Keep the story short, around 3-4 paragraphs.';
+            else if (length === 'long') lengthInstruction = 'Write a long, detailed story with rich descriptions.';
+            else lengthInstruction = 'Write a story of medium length, around 5-7 paragraphs.';
+            
+            const creativityInstruction = isCreative ? 'Be highly creative, use vivid imagery, metaphors, and unexpected twists.' : 'Write an engaging and well-structured story.';
 
-User request: ${userQuery}
+            const prompt = `You are a master storyteller. ${creativityInstruction} ${lengthInstruction} Do not roleplay or break character. Just tell the story.\n\nStory prompt: ${userQuery}\n\nStory:`;
 
-Story:`;
+            // Use Gemini for storytelling (best creative AI)
+            const url = `${AI_GATEWAY}/ai/gemini?text=${encodeURIComponent(prompt)}&token=${AI_TOKEN}`;
+            
+            const response = await axios.get(url, { timeout: 60000 });
+            let result = response.data?.result || '';
 
-            // Build URL with parameters
-            let apiUrl = `${AI_BASE}/advanced?text=${encodeURIComponent(TRAINING_PROMPT)}`;
-            if (length !== 'medium') apiUrl += `&length=${length}`;
-            if (isCreative) apiUrl += `&creative=true`;
-
-            const response = await axios.get(apiUrl, { timeout: 60000 });
-            const json = response.data;
-
-            // Deep search for text content (same robust extraction)
-            let result = null;
-            if (typeof json === 'string') {
-                result = json;
-            } else {
-                const paths = ['story', 'result', 'response', 'text', 'output', 'message', 'content', 'data', 'answer', 'generated', 'reply'];
-                for (const path of paths) {
-                    if (json[path]) {
-                        result = json[path];
-                        break;
-                    }
-                }
-                if (!result && typeof json === 'object') {
-                    const values = Object.values(json);
-                    for (const val of values) {
-                        if (typeof val === 'string' && val.length > 50) {
-                            result = val;
-                            break;
-                        }
-                    }
-                }
+            // Fallback to Claude if Gemini fails
+            if (!result || result.length < 10) {
+                const fallbackUrl = `${AI_GATEWAY}/ai/claude?text=${encodeURIComponent(prompt)}&token=${AI_TOKEN}`;
+                const fallbackRes = await axios.get(fallbackUrl, { timeout: 60000 });
+                result = fallbackRes.data?.result || '';
             }
 
-            if (typeof result === 'object' && result !== null) {
-                const innerPaths = ['story', 'text', 'content', 'message', 'response'];
-                for (const path of innerPaths) {
-                    if (result[path]) {
-                        result = result[path];
-                        break;
-                    }
-                }
-                if (typeof result === 'object') result = JSON.stringify(result);
-            }
-
-            if (!result || result === '[object Object]' || result.length < 10) {
-                console.log('[STORY] Full response:', JSON.stringify(json));
+            if (!result || result.length < 10) {
                 return reply('✘ Could not generate story');
             }
 
