@@ -1,4 +1,4 @@
-here// ZEE BOT V2 — Anti Spam
+// ZEE BOT V2 — Anti Spam
 const fs   = require('fs');
 const path = require('path');
 
