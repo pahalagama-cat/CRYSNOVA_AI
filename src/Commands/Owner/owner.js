@@ -1,32 +1,39 @@
+const { getVar } = require('../../Plugin/configManager');
+
 module.exports = {
     name: 'owner',
     alias: ['creator', 'admin'],
     desc: 'Show bot owner contact',
     category: 'Bot',
-     // ⭐ Reaction config
     reactions: {
         start: '💬',
         success: '❔'
     },
     
-    execute: async (sock, m) => {
+    execute: async (sock, m, { config: cfg }) => {
         try {
-            // Get bot’s own JID
-            const ownerJid = sock.user.id; // e.g., '2348012345678@s.whatsapp.net'
-            const ownerNumber = ownerJid.split('@')[0];
+            const botName = process.env.BOT_NAME || getVar('BOT_NAME', cfg?.bot?.name) || 'CRYSNOVA AI';
+            const ownerName = process.env.OWNER_NAME || getVar('OWNER_NAME', cfg?.ownerName) || 'CREATOR';
+            const ownerRaw = process.env.OWNER_NUMBER || getVar('OWNER_NUMBER', cfg?.owner) || cfg?.owner || '';
+            const ownerNumber = ownerRaw.replace(/[^0-9]/g, '').split('@')[0];
 
-            // Create vCard string
             const vcard = `
 BEGIN:VCARD
 VERSION:3.0
-FN:CRYSNOVA BOT
+FN:${ownerName}
 TEL;type=CELL;type=VOICE;waid=${ownerNumber}:${ownerNumber}
 END:VCARD
             `.trim();
 
+            // Send watermark first
+        //    await sock.sendMessage(m.chat, {
+        //        text: `🤖 *${botName}*\n👑 *${ownerName}*\n📱 wa.me/${ownerNumber}`
+      //      }, { quoted: m });
+
+            // Then send vCard contact
             await sock.sendMessage(m.chat, {
                 contacts: {
-                    displayName: 'CRYSNOVA BOT',
+                    displayName: ownerName,
                     contacts: [{ vcard }]
                 }
             }, { quoted: m });
