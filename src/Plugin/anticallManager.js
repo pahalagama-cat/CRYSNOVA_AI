@@ -4,7 +4,7 @@ const path = require('path');
 const CONFIG_PATH = path.join(process.cwd(), 'database', 'anticall.json');
 
 const defaultConfig = {
-    enabled: true,                      // Global ON/OFF for unknown callers only
+    enabled: false,                      // OFF by default
     reason: '`📵 CALL N⚉T PERMITTED ✐`',
     unknownReason: '`📵 Unknown number – call blocked.`',
     schedule: {
@@ -16,9 +16,9 @@ const defaultConfig = {
         dates: [],
         months: []
     },
-    blacklist: [],                      // Always reject (even if global is OFF)
-    whitelist: [],                      // Always allow (even if global is OFF)
-    pendingPhoneReject: []              // Numbers awaiting LID upgrade
+    blacklist: [],
+    whitelist: [],
+    pendingPhoneReject: []
 };
 
 function loadConfig() {
@@ -38,7 +38,7 @@ function saveConfig(config) {
 function normalizeJid(jid) {
     if (!jid) return '';
     let cleaned = jid.trim().toLowerCase();
-    cleaned = cleaned.replace(/:\d+(@|$)/, '$1');   // remove device/port suffix
+    cleaned = cleaned.replace(/:\d+(@|$)/, '$1');
     return cleaned;
 }
 
@@ -62,7 +62,6 @@ function isWithinSchedule(schedule) {
         return now >= start && now <= end;
     }
 
-    // recurring schedule
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
     const [startH, startM] = schedule.start.split(':').map(Number);
     const [endH, endM] = schedule.end.split(':').map(Number);
@@ -92,9 +91,6 @@ function isWithinSchedule(schedule) {
     return true;
 }
 
-/**
- * Try to find a LID for a given phone number from Baileys local cache.
- */
 function findLidForPhone(phone) {
     const sessionsDir = path.join(process.cwd(), 'sessions');
     try {
