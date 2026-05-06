@@ -1,4 +1,4 @@
-# 🚀 CRYSNOVA AI V2.0 — Setup Guide
+# 🚀 CRYSNOVA AI CODI.0 — Setup Guide
 
 ## ✨ NEW: Interactive Setup Wizard
 
