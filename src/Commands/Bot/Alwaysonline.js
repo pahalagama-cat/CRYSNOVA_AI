@@ -1,15 +1,14 @@
 const fs = require('fs');
 const path = require('path');
 
-// Storage file
 const STATUS_FILE = path.join(__dirname, '../../../database/always-online.json');
 
-let alwaysOnlineEnabled = false;
+let alwaysOnlineEnabled = true; // ON by default
 
 try {
     if (fs.existsSync(STATUS_FILE)) {
         const data = JSON.parse(fs.readFileSync(STATUS_FILE, 'utf8'));
-        alwaysOnlineEnabled = data.enabled || false;
+        alwaysOnlineEnabled = data.enabled ?? true;
     }
 } catch (e) {
     console.error('[Always Online] Load error:', e.message);
@@ -22,7 +21,6 @@ function saveStatus() {
     } catch (e) {}
 }
 
-// Periodic presence update (every 60 seconds)
 let presenceInterval = null;
 
 function startPresenceLoop(sock) {
@@ -35,10 +33,9 @@ function startPresenceLoop(sock) {
         } catch (e) {
             console.error('[Presence Refresh Error]', e.message);
         }
-    }, 60000); // 60 seconds
+    }, 60000);
 }
 
-// Stop loop when disabled
 function stopPresenceLoop() {
     if (presenceInterval) {
         clearInterval(presenceInterval);
@@ -46,14 +43,12 @@ function stopPresenceLoop() {
     }
 }
 
-// Start on bot load if enabled
 if (alwaysOnlineEnabled) {
-    // Assuming sock is global or accessible - adjust if needed
     setTimeout(() => {
         if (global.sock) {
             startPresenceLoop(global.sock);
         }
-    }, 5000); // wait for bot to fully connect
+    }, 5000);
 }
 
 module.exports = {
@@ -63,7 +58,6 @@ module.exports = {
     category: 'owner',
     usage: '.online   |   .offline   |   .online (check status)',
     owner: true,
-
 
     execute: async (sock, m, { args, reply }) => {
         const cmd = m.body.toLowerCase().split(/\s+/)[0].slice(1);
@@ -96,7 +90,6 @@ module.exports = {
             saveStatus();
             stopPresenceLoop();
 
-            // Set to normal presence
             await sock.sendPresenceUpdate('available');
 
             await reply(
@@ -109,7 +102,6 @@ module.exports = {
             });
 
         } else {
-            // Check status
             const status = alwaysOnlineEnabled ? '_*—͟͟͞͞𖣘 ON*_' : '_*𓊈𖣘𓊉 OFF*_';
             await reply(`Always Online mode: *${status}*\n\n` +
                         `_Use *.online* to enable_\n` +
