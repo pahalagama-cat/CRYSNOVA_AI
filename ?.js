@@ -1,7 +1,8 @@
 /**
  * ╔══════════════════════════════════════════════════╗
  * ║   - ZEE BOT V2          ║
- * ║   CRYSNOVA AI V2 Message Routing Engine          ║
+ * ║   CRYSNOVA AI V2 Message Routing Engine  
+ * ║   This is a property of CRYSNOVA AI/CODI AI all rights reserved 
  * ╚══════════════════════════════════════════════════╝
  */
 
