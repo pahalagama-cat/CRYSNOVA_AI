@@ -6,3 +6,4 @@ database/user-config.json
 database/ai-memory.json
 src/Commands/*/assets/
 *.log
+
