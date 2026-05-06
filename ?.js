@@ -113,7 +113,7 @@ sock.sendMessage = async (jid, content, options = {}) => {
                 },
                 forwardedNewsletterMessageInfo: {
                     newsletterJid: '120363402922206865@newsletter',
-                    newsletterName: '🏷️  𝓬𝓻𝔂𝓼𝓷𝓸𝓿𝓪 𝓿𝓮𝓻𝓲𝓯𝓲𝓮𝓭 ✓',
+                    newsletterName: '🔖  𝓬𝓻𝔂𝓼𝓷𝓸𝓿𝓪 𝓿𝓮𝓻𝓲𝓯𝓲𝓮𝓭 ✓',
                     serverMessageId: 1
                 }
             };
