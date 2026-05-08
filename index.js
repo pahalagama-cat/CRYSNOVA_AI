@@ -1,6 +1,6 @@
 /**
  * CRYSNOVA AI V2 – Entry Point
- * Handles auto‑update check before loading the main (obfuscated) bot file.
+ * 🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖
  */
 
 const fs = require('fs');
@@ -28,7 +28,7 @@ try {
 (async () => {
     if (autoUpdateEnabled) {
         console.log(chalk.yellow('𝌆  updating...ⓘ'));
-        console.log(chalk.cyan('⎙ [CRYSNOVA] —͟͟͞͞𖣘❚ Starting update (blocking startup)...'));
+        console.log(chalk.cyan('🔖 [CRYSNOVA] —͟͟͞͞𖣘❚ Starting update (blocking startup)...'));
 
         const { performUpdate } = require('./src/Plugin/updater.js');
 
@@ -36,7 +36,7 @@ try {
             const result = await performUpdate({ notifyOwner: null });
             if (result.success) {
                 console.log(chalk.green('✓ [CRYSNOVA] Background update completed successfully.'));
-                console.log(chalk.cyan('⎙ [CRYSNOVA] —͟͟͞͞𖣘❚ Changes applied.'));
+                console.log(chalk.cyan('🔖 [CRYSNOVA] —͟͟͞͞𖣘❚ Changes applied.'));
             } else {
                 console.log(chalk.red('✘ [CRYSNOVA] Background update failed:'), result.error);
             }
@@ -50,7 +50,8 @@ try {
     // -------------------------------------------------------------------
     // 3. Load and start 
     // -------------------------------------------------------------------
-    console.log(chalk.cyan('⎙ [CRYSNOVA] —͟͟͞͞𖣘❚ Loading main bot...'));
+    console.log(chalk.cyan('🔖 [CRYSNOVA] —͟͟͞͞𖣘❚ Loading main bot...'));
     require('./⚉.js');
 })();
 
+//🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖🔖
