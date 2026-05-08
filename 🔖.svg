@@ -15,6 +15,7 @@
     </filter>
   </defs>
 
+  
   <style>
     /* CSS Animations */
     @keyframes pulse {
