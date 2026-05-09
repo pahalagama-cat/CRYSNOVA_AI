@@ -10,7 +10,7 @@
 //✠ ✡ ✪ ⎔ ⏚ ⌘ ⌥ ⎈ ⍟ ∆
 //◐ ◑ ◒ ◓ ◔ ◕ ◖ ◗ ◙ ◚
 
-/*.welcome Welcome 🤗 
+/**.welcome Welcome 🤗 
 
 𝌆```Tutoral```
 https://youtu.be/duOK_pdIo6M?si=7508HE9JqQnQ2U7p
