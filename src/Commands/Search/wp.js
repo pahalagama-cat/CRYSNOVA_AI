@@ -1,59 +1,70 @@
 const axios = require('axios');
+const config = require('../../../settings/config');
 
-module.exports = [{
+const BOT_NAME = config.botname || process.env.BOTNAME || 'CRYSNOVA';
+
+module.exports = {
     name: 'wallpaper',
-    alias: ['wp', 'wall', 'bg'],
+    alias: ['wlp', 'wall',],
+    desc: 'Search for beautiful wallpapers',
     category: 'Search',
-    desc: 'Search and send wallpapers',
     usage: '.wallpaper <query>',
-    reactions: { start: '🖼️', success: '✨' },
-    
+
     execute: async (sock, m, { args, reply }) => {
         const query = args.join(' ').trim();
-        if (!query) return reply('`×͜× Provide a wallpaper search query ×͜×`');
-        
+        if (!query) return reply('_Provide a wallpaper query to search._');
+
         try {
-            await sock.sendMessage(m.chat, { 
-                react: { text: '🖼️', key: m.key } 
-            });
+            await sock.sendMessage(m.chat, { react: { text: '🖼️', key: m.key } });
             
-            // Use YOUR Worker API
             const res = await axios.get(`https://wallpaper.crysnovax.link/api/search?query=${encodeURIComponent(query)}`);
-            const results = res.data?.results;
-            
+            const data = res.data;
+            const results = data?.results;
+
             if (!Array.isArray(results) || results.length === 0) {
-                return reply(`\`×͜× No wallpapers found for "${query}" ×͜×\``);
+                return reply(`✘ No wallpapers found for "${query}"`);
             }
-            
-            // Send first wallpaper with caption
+
+            // Build interactive carousel cards (max 10 cards)
+            const cards = results.slice(0, 10).map(wp => ({
+                image: { url: wp.proxy },
+                caption: `🖼️ *Wallpaper*\n🔍 ${query}`,
+                footer: `⚉ ${BOT_NAME} Vault`,
+                nativeFlow: [{
+                    text: '📥 Download',
+                    url: wp.proxy
+                }, {
+                    text: '📋 Copy URL',
+                    copy: wp.proxy
+                }]
+            }));
+
+            // Send as interactive carousel message
             await sock.sendMessage(m.chat, {
-                image: { url: results[0].proxy },
-                caption: `🖼️ *Wallpaper: ${query}*\n📸 *1 of ${results.length}*`
+                text: `🖼️ *WALLPAPER SEARCH: ${query}*`,
+                footer: `Found ${results.length} results`,
+                cards: cards
             }, { quoted: m });
-            
-            // Send 4 more wallpapers
-            for (let i = 1; i < Math.min(results.length, 5); i++) {
-                await sock.sendMessage(m.chat, {
-                    image: { url: results[i].proxy },
-                    caption: `🖼️ *${query}* [${i + 1}/${results.length}]`
-                }, { quoted: m });
-                await new Promise(r => setTimeout(r, 500));
-            }
-            
-            // Show remaining count
-        //    if (results.length > 5) {
-        //        await sock.sendMessage(m.chat, {
-       //             text: `📋 *+${results.length - 5} more wallpapers available*\n🔍 *Query:* ${query}\n📸 *Total:* ${results.length} results\n\n_Use .wp ${query} again for fresh results_`
-         //       }, { quoted: m });
-      //      }
-            
-            await sock.sendMessage(m.chat, { 
-                react: { text: '✨', key: m.key } 
-            });
+
+            await sock.sendMessage(m.chat, { react: { text: '✨', key: m.key } });
             
         } catch (err) {
             console.error('[WALLPAPER]', err.message);
-            reply('`×͜× Wallpaper search failed ×͜×`');
+            
+            // Fallback to simple image messages if carousel fails
+            try {
+                const res = await axios.get(`https://wallpaper.crysnovax.link/api/search?query=${encodeURIComponent(query)}`);
+                const results = res.data?.results || [];
+                for (const wp of results.slice(0, 5)) {
+                    await sock.sendMessage(m.chat, {
+                        image: { url: wp.proxy },
+                        caption: `🖼️ *Wallpaper: ${query}*\n\n_⚉ ${BOT_NAME} Vault_`
+                    }, { quoted: m });
+                    await new Promise(r => setTimeout(r, 300));
+                }
+            } catch (fallbackErr) {
+                reply('✘ Search failed entirely.');
+            }
         }
     }
-}];
+};
