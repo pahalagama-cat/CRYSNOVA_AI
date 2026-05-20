@@ -1,7 +1,8 @@
 // ============================================================
-// PANEL CONNECTOR API — Full Code
+// PANEL CONNECTOR API — Full Code (No Auth)
 // Goes in crysnovax/CRYSNOVA_AI/panel-connector.js
 // CODY calls this to see EVERYTHING in your panel
+// No authentication — private repo, only you deploy it
 // ============================================================
 
 const express = require('express');
@@ -13,18 +14,20 @@ const os = require('os');
 const app = express();
 app.use(express.json());
 
-const PORT = process.env.PANEL_API_PORT || 9000;
-const SECRET = process.env.PANEL_API_SECRET || 'cody-panel-secret-key';
-const ROOT_PATH = process.env.PANEL_ROOT || '/home/container/CRYSNOVA_AI';
+// ============ CONFIG ============
+let ROOT_PATH, PORT;
 
-// ============ AUTH MIDDLEWARE ============
-function auth(req, res, next) {
-    const token = req.headers['x-panel-token'] || req.query.token;
-    if (token !== SECRET) {
-        return res.status(403).json({ error: 'Unauthorized — invalid panel token' });
-    }
-    next();
+try {
+    const config = require('./settings/config');
+    ROOT_PATH = config.panelRoot || process.env.PANEL_ROOT || process.cwd();
+    PORT = config.panelApiPort || process.env.PANEL_API_PORT || 9000;
+} catch (e) {
+    ROOT_PATH = process.env.PANEL_ROOT || process.cwd();
+    PORT = process.env.PANEL_API_PORT || 9000;
 }
+
+// ============ NO AUTH — Full Open Access ============
+// Private repo, only you deploy — no secret needed
 
 // ============ HEALTH ============
 app.get('/api/health', (req, res) => {
@@ -40,8 +43,7 @@ app.get('/api/health', (req, res) => {
 
 // ============ FILE SYSTEM ============
 
-// List all files in a directory
-app.get('/api/files', auth, (req, res) => {
+app.get('/api/files', (req, res) => {
     try {
         const dir = req.query.path || ROOT_PATH;
         const fullPath = path.resolve(dir);
@@ -64,8 +66,7 @@ app.get('/api/files', auth, (req, res) => {
     }
 });
 
-// Read a specific file
-app.get('/api/file', auth, (req, res) => {
+app.get('/api/file', (req, res) => {
     try {
         const filePath = req.query.path;
         if (!filePath) return res.status(400).json({ error: 'Missing path' });
@@ -95,8 +96,7 @@ app.get('/api/file', auth, (req, res) => {
     }
 });
 
-// Search files by name pattern
-app.get('/api/search', auth, (req, res) => {
+app.get('/api/search', (req, res) => {
     try {
         const pattern = req.query.q || '';
         const dir = req.query.path || ROOT_PATH;
@@ -135,8 +135,7 @@ app.get('/api/search', auth, (req, res) => {
     }
 });
 
-// Write/create a file
-app.post('/api/file', auth, (req, res) => {
+app.post('/api/file', (req, res) => {
     try {
         const { path: filePath, content } = req.body;
         if (!filePath || content === undefined) {
@@ -161,8 +160,7 @@ app.post('/api/file', auth, (req, res) => {
     }
 });
 
-// Delete a file
-app.delete('/api/file', auth, (req, res) => {
+app.delete('/api/file', (req, res) => {
     try {
         const filePath = req.query.path;
         if (!filePath) return res.status(400).json({ error: 'Missing path' });
@@ -186,7 +184,7 @@ app.delete('/api/file', auth, (req, res) => {
 
 // ============ CONSOLE / LOGS ============
 
-app.get('/api/logs', auth, (req, res) => {
+app.get('/api/logs', (req, res) => {
     try {
         const lines = parseInt(req.query.lines) || 50;
         const logFile = path.join(ROOT_PATH, 'console.log');
@@ -205,7 +203,7 @@ app.get('/api/logs', auth, (req, res) => {
 
 // ============ BOT STATUS ============
 
-app.get('/api/status', auth, (req, res) => {
+app.get('/api/status', (req, res) => {
     try {
         const stats = {
             uptime: process.uptime(),
@@ -232,8 +230,7 @@ app.get('/api/status', auth, (req, res) => {
 
 // ============ NODE MODULES EXPLORER ============
 
-// List ALL installed packages and their exported functions
-app.get('/api/modules', auth, (req, res) => {
+app.get('/api/modules', (req, res) => {
     try {
         const modulesPath = path.join(ROOT_PATH, 'node_modules');
         
@@ -244,7 +241,6 @@ app.get('/api/modules', auth, (req, res) => {
         const packages = [];
         const items = fs.readdirSync(modulesPath, { withFileTypes: true });
         
-        // Regular packages
         for (const item of items) {
             if (!item.isDirectory() || item.name.startsWith('.') || item.name.startsWith('@')) continue;
             
@@ -289,7 +285,6 @@ app.get('/api/modules', auth, (req, res) => {
             } catch (e) {}
         }
         
-        // Scoped packages (@crysnovax, @whiskeysockets, etc.)
         const scopedDirs = items.filter(i => i.isDirectory() && i.name.startsWith('@'));
         for (const scope of scopedDirs) {
             const scopePath = path.join(modulesPath, scope.name);
@@ -341,8 +336,7 @@ app.get('/api/modules', auth, (req, res) => {
     }
 });
 
-// Search ALL node_modules source code for a term
-app.get('/api/modules/search', auth, (req, res) => {
+app.get('/api/modules/search', (req, res) => {
     try {
         const query = req.query.q || '';
         if (!query || query.length < 2) return res.json({ error: 'Query too short (min 2 chars)', results: [] });
@@ -393,7 +387,6 @@ app.get('/api/modules/search', auth, (req, res) => {
         }
         searchDir(searchPath);
 
-        // Group by package
         const byPackage = {};
         results.forEach(r => {
             if (!byPackage[r.package]) byPackage[r.package] = [];
@@ -413,7 +406,7 @@ app.get('/api/modules/search', auth, (req, res) => {
 
 // ============ COMMAND TESTER ============
 
-app.post('/api/test', auth, (req, res) => {
+app.post('/api/test', (req, res) => {
     try {
         const { filePath } = req.body;
         if (!filePath) return res.status(400).json({ error: 'Missing filePath' });
@@ -456,7 +449,7 @@ app.post('/api/test', auth, (req, res) => {
 
 // ============ RUN SHELL COMMAND ============
 
-app.post('/api/run', auth, (req, res) => {
+app.post('/api/run', (req, res) => {
     try {
         const { command } = req.body;
         if (!command) return res.status(400).json({ error: 'Missing command' });
@@ -481,7 +474,7 @@ app.post('/api/run', auth, (req, res) => {
 
 // ============ GIT INFO ============
 
-app.get('/api/git', auth, (req, res) => {
+app.get('/api/git', (req, res) => {
     try {
         const gitPath = path.join(ROOT_PATH, '.git');
         if (!fs.existsSync(gitPath)) {
@@ -519,19 +512,8 @@ app.get('/api/git', auth, (req, res) => {
 app.listen(PORT, () => {
     console.log(`🔌 Panel Connector API running on port ${PORT}`);
     console.log(`📂 Root: ${ROOT_PATH}`);
-    console.log(`🔐 Secret: ${SECRET.slice(0, 4)}...`);
-    console.log(`📡 Endpoints:`);
-    console.log(`   /api/health        - Server health`);
-    console.log(`   /api/files         - List files`);
-    console.log(`   /api/file          - Read/write/delete files`);
-    console.log(`   /api/search        - Search files by name`);
-    console.log(`   /api/logs          - Console logs`);
-    console.log(`   /api/status        - Bot/panel stats`);
-    console.log(`   /api/modules       - ALL node_modules packages & functions`);
-    console.log(`   /api/modules/search - Search ALL node_modules code`);
-    console.log(`   /api/test          - Validate command files`);
-    console.log(`   /api/run           - Execute shell commands`);
-    console.log(`   /api/git           - Git info`);
+    console.log(`🔓 No authentication — open access`);
+    console.log(`📡 14 endpoints ready for CODY`);
 });
 
 module.exports = app;
