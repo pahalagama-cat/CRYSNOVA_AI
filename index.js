@@ -35,18 +35,17 @@ try {
 // 3. Register with Cody Worker (silent)
 // -------------------------------------------------------------------
 const CODY_API_KEY = process.env.CODY_API_KEY || '';
-const BOT_URL = process.env.BOT_URL || process.env.RENDER_EXTERNAL_URL || '';
 
-if (CODY_API_KEY && BOT_URL) {
+if (CODY_API_KEY) {
     const axios = require('axios');
     axios.post('https://cody.crysnovax.link/register', {
         name: 'crysnova',
-        url: BOT_URL,
+        url: `http://localhost:${process.env.PANEL_API_PORT || 9000}`,
         api_key: CODY_API_KEY
     }).then(() => console.log(chalk.green('✅ Registered with Cody Worker')))
       .catch(e => console.log(chalk.yellow('⚠️ Cody Worker registration failed:'), e.message));
 } else {
-    console.log(chalk.gray('ℹ️ Cody Worker registration skipped (no API key or URL)'));
+    console.log(chalk.gray('ℹ️ Cody Worker registration skipped (no API key)'));
 }
 
 // -------------------------------------------------------------------
